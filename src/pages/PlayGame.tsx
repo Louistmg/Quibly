@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { GameSession, Quiz, Player, Question, Answer } from '@/types'
 import { StopWatchIcon, CrownIcon, Tick02Icon, Cancel02Icon } from 'hugeicons-react'
+import { GameSession, Quiz, Player, Question, Answer } from '@/types'
+import { useSupabase } from '@/hooks/useSupabase'
 
 interface PlayGameProps {
   session: GameSession | null
@@ -41,6 +42,9 @@ export function PlayGame({ quiz, player, onEnd }: PlayGameProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [showResult, setShowResult] = useState(false)
   const [score, setScore] = useState(0)
+  const [answerResult, setAnswerResult] = useState<{ isCorrect: boolean; pointsEarned: number; correctAnswerId: string | null } | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { submitAnswer } = useSupabase()
 
   const currentQuestion: Question | undefined = quiz?.questions[currentQuestionIndex]
   
@@ -52,26 +56,36 @@ export function PlayGame({ quiz, player, onEnd }: PlayGameProps) {
   // Track previous question to detect changes
   const prevQuestionRef = useRef<Question | undefined>(undefined)
 
-  const handleAnswer = useCallback((answerId: string | null) => {
-    if (!currentQuestion || showResult) return
+  const handleAnswer = useCallback(async (answerId: string | null) => {
+    if (!currentQuestion || showResult || !player || isSubmitting) return
 
     setSelectedAnswer(answerId)
     setShowResult(true)
+    setIsSubmitting(true)
 
-    const selectedAnswerObj = currentQuestion.answers.find(a => a.id === answerId)
-    const isCorrect = selectedAnswerObj?.isCorrect || false
-
-    if (isCorrect) {
-      const timeBonus = (timeRemaining / currentQuestion.timeLimit) * (currentQuestion.points / 2)
-      setScore(prev => prev + currentQuestion.points + timeBonus)
+    try {
+      const result = await submitAnswer(player.id, currentQuestion.id, answerId, timeRemaining)
+      const pointsEarned = result?.points_earned ?? 0
+      setAnswerResult({
+        isCorrect: result?.is_correct ?? false,
+        pointsEarned,
+        correctAnswerId: result?.correct_answer_id ?? null,
+      })
+      if (typeof result?.new_score === 'number') {
+        setScore(result.new_score)
+      } else {
+        setScore(prev => prev + pointsEarned)
+      }
+    } catch (err) {
+      console.error('Error submitting answer:', err)
+      setAnswerResult({
+        isCorrect: false,
+        pointsEarned: 0,
+        correctAnswerId: null,
+      })
+    } finally {
+      setIsSubmitting(false)
     }
-
-    console.log('Answer recorded:', {
-      questionId: currentQuestion.id,
-      answerId: answerId || '',
-      timeRemaining,
-      isCorrect,
-    })
 
     setTimeout(() => {
       if (currentQuestionIndex < (quiz?.questions.length || 0) - 1) {
@@ -80,7 +94,7 @@ export function PlayGame({ quiz, player, onEnd }: PlayGameProps) {
         onEnd()
       }
     }, 2500)
-  }, [currentQuestion, currentQuestionIndex, quiz, timeRemaining, onEnd, showResult])
+  }, [currentQuestion, currentQuestionIndex, quiz, timeRemaining, onEnd, showResult, player, submitAnswer, isSubmitting])
 
   // Reset state when question changes using a microtask to avoid sync setState
   useEffect(() => {
@@ -90,6 +104,7 @@ export function PlayGame({ quiz, player, onEnd }: PlayGameProps) {
       Promise.resolve().then(() => {
         setTimeRemaining(currentQuestion.timeLimit)
         setSelectedAnswer(null)
+        setAnswerResult(null)
         setShowResult(false)
       })
     }
@@ -163,7 +178,8 @@ export function PlayGame({ quiz, player, onEnd }: PlayGameProps) {
       <div className="grid grid-cols-2 gap-4 max-w-4xl mx-auto">
         {currentQuestion.answers.map((answer) => {
           const isSelected = selectedAnswer === answer.id
-          const isCorrect = answer.isCorrect
+          const isCorrect = answerResult?.correctAnswerId === answer.id
+          const canShowCorrect = showResult && answerResult !== null
           
           return (
             <button
@@ -175,7 +191,7 @@ export function PlayGame({ quiz, player, onEnd }: PlayGameProps) {
                 transition-all duration-300 transform hover:scale-105
                 ${getAnswerBgClass(answer.color)}
                 ${getAnswerShape(answer.color)}
-                ${getAnswerColorClass(answer.color, isSelected, showResult, isCorrect)}
+                ${getAnswerColorClass(answer.color, isSelected, canShowCorrect, isCorrect)}
                 ${showResult ? 'cursor-default' : 'cursor-pointer shadow-lg hover:shadow-xl'}
               `}
             >
@@ -200,10 +216,10 @@ export function PlayGame({ quiz, player, onEnd }: PlayGameProps) {
       {/* Result Message */}
       {showResult && (
         <div className="text-center mt-8">
-          {selectedAnswer && currentQuestion.answers.find(a => a.id === selectedAnswer)?.isCorrect ? (
+          {answerResult?.isCorrect ? (
             <div className="inline-flex items-center gap-2 bg-[hsl(var(--answer-green))] text-white px-6 py-3 rounded-full font-medium text-xl">
               <Tick02Icon className="w-6 h-6" />
-              Bonne réponse ! +{currentQuestion.points + Math.floor((timeRemaining / currentQuestion.timeLimit) * (currentQuestion.points / 2))} pts
+              Bonne réponse ! +{answerResult.pointsEarned} pts
             </div>
           ) : selectedAnswer ? (
             <div className="inline-flex items-center gap-2 bg-[hsl(var(--answer-red))] text-white px-6 py-3 rounded-full font-medium text-xl">

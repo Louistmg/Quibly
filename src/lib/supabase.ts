@@ -36,6 +36,14 @@ export type Answer = {
   created_at: string
 }
 
+export type PublicAnswer = {
+  id: string
+  question_id: string
+  text: string
+  color: 'red' | 'blue' | 'yellow' | 'green'
+  sort_order: number
+}
+
 export type GameSession = {
   id: string
   quiz_id: string
@@ -52,6 +60,7 @@ export type GameSession = {
 export type Player = {
   id: string
   session_id: string
+  user_id: string | null
   name: string
   score: number
   is_host: boolean
