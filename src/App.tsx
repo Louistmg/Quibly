@@ -222,13 +222,11 @@ function App() {
       
       const dbQuiz = await createQuiz(quiz.title, quiz.description || '', questionsForDb)
       
-      const newQuiz: Quiz = {
-        ...quiz,
-        id: dbQuiz.id,
-        createdAt: new Date(dbQuiz.created_at),
-        code: dbQuiz.code,
+      const freshQuiz = await getQuizByCode(dbQuiz.code)
+      if (!freshQuiz) {
+        throw new Error('Quiz introuvable après création.')
       }
-      setCurrentQuiz(newQuiz)
+      setCurrentQuiz(mapQuizFromDb(freshQuiz))
       
       const dbSession = await createGameSession(dbQuiz.id)
       
