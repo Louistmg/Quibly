@@ -17,8 +17,10 @@ export function JoinGame({ onJoin, onBack, isLoading }: JoinGameProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (code.trim() && playerName.trim()) {
-      onJoin(code.toUpperCase(), playerName)
+    const trimmedCode = code.trim()
+    const trimmedName = playerName.trim()
+    if (trimmedCode && trimmedName) {
+      onJoin(trimmedCode.toUpperCase(), trimmedName)
     }
   }
 
