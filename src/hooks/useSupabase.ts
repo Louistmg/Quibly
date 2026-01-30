@@ -173,7 +173,22 @@ export function useSupabase() {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        if (error.code === '23505') {
+          const { data: existingPlayer, error: existingError } = await supabase
+            .from('players')
+            .select('*')
+            .eq('session_id', sessionId)
+            .eq('user_id', authUserId)
+            .single()
+
+          if (existingError) throw existingError
+          return existingPlayer as Player
+        }
+
+        throw error
+      }
+
       return data as Player
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'))
