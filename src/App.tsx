@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { GamePhase, Quiz, GameSession, Player } from '@/types'
 import { Home } from '@/pages/Home'
 import { CreateQuiz } from '@/pages/CreateQuiz'
@@ -7,7 +7,89 @@ import { GameLobby } from '@/pages/GameLobby'
 import { PlayGame } from '@/pages/PlayGame'
 import { Results } from '@/pages/Results'
 import { useSupabase } from '@/hooks/useSupabase'
+import type { Quiz as DbQuiz, Question as DbQuestion, PublicAnswer as DbPublicAnswer, GameSession as DbGameSession, Player as DbPlayer } from '@/lib/supabase'
 import './App.css'
+
+type PublicQuizPayload = DbQuiz & { questions: (DbQuestion & { answers: DbPublicAnswer[] })[] }
+
+type StoredSession = {
+  sessionId: string
+  quizCode: string
+  playerId?: string
+}
+
+const ACTIVE_SESSION_KEY = 'quibly:active-session'
+
+const isStoredSession = (value: unknown): value is StoredSession => {
+  if (!value || typeof value !== 'object') return false
+  const record = value as Record<string, unknown>
+  const sessionId = record.sessionId
+  const quizCode = record.quizCode
+  const playerId = record.playerId
+  return typeof sessionId === 'string'
+    && typeof quizCode === 'string'
+    && (typeof playerId === 'string' || typeof playerId === 'undefined')
+}
+
+const readStoredSession = (): StoredSession | null => {
+  if (typeof window === 'undefined') return null
+  const raw = window.localStorage.getItem(ACTIVE_SESSION_KEY)
+  if (!raw) return null
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    return isStoredSession(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+const writeStoredSession = (value: StoredSession) => {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(value))
+}
+
+const clearStoredSession = () => {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(ACTIVE_SESSION_KEY)
+}
+
+const mapQuizFromDb = (quizData: PublicQuizPayload): Quiz => ({
+  id: quizData.id,
+  title: quizData.title,
+  description: quizData.description || '',
+  code: quizData.code,
+  createdAt: new Date(quizData.created_at),
+  questions: quizData.questions.map(q => ({
+    id: q.id,
+    text: q.text,
+    timeLimit: q.time_limit,
+    points: q.points,
+    answers: q.answers.map(a => ({
+      id: a.id,
+      text: a.text,
+      color: a.color,
+    })),
+  })),
+})
+
+const mapSessionFromDb = (sessionData: DbGameSession): GameSession => ({
+  id: sessionData.id,
+  quizId: sessionData.quiz_id,
+  code: sessionData.code,
+  status: sessionData.status,
+  players: [],
+  currentQuestionIndex: sessionData.current_question_index ?? 0,
+  hostId: sessionData.host_id,
+})
+
+const mapPlayerFromDb = (playerData: DbPlayer, fallbackUserId: string): Player => ({
+  id: playerData.id,
+  name: playerData.name,
+  score: playerData.score,
+  answers: [],
+  isHost: playerData.is_host,
+  userId: playerData.user_id ?? fallbackUserId,
+})
 
 function App() {
   const [phase, setPhase] = useState<GamePhase>('home')
@@ -15,13 +97,78 @@ function App() {
   const [currentSession, setCurrentSession] = useState<GameSession | null>(null)
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   
-  const { createQuiz, createGameSession, joinGame, updateSessionStatus, getQuizByCode, getWaitingSessionByCode, ensureAuth, loading, error } = useSupabase()
+  const { createQuiz, createGameSession, joinGame, updateSessionStatus, getQuizByCode, getWaitingSessionByCode, getSessionById, getPlayerById, getPlayerBySession, ensureAuth, loading, error } = useSupabase()
+
+  const clearActiveSession = useCallback(() => {
+    clearStoredSession()
+    setCurrentQuiz(null)
+    setCurrentSession(null)
+    setCurrentPlayer(null)
+    setPhase('home')
+  }, [])
 
   useEffect(() => {
     ensureAuth().catch((err: unknown) => {
       console.error('Auth error:', err)
     })
   }, [ensureAuth])
+
+  useEffect(() => {
+    let isActive = true
+
+    const restoreSession = async () => {
+      const stored = readStoredSession()
+      if (!stored) return
+
+      try {
+        const authUserId = await ensureAuth()
+        const [sessionData, quizData] = await Promise.all([
+          getSessionById(stored.sessionId),
+          getQuizByCode(stored.quizCode),
+        ])
+
+        if (!sessionData || !quizData) {
+          if (isActive) clearActiveSession()
+          return
+        }
+
+        let playerData: DbPlayer | null = null
+        if (stored.playerId) {
+          playerData = await getPlayerById(stored.playerId)
+        }
+        if (!playerData) {
+          playerData = await getPlayerBySession(stored.sessionId)
+        }
+
+        if (!playerData) {
+          if (isActive) clearActiveSession()
+          return
+        }
+
+        if (!isActive) return
+
+        setCurrentQuiz(mapQuizFromDb(quizData))
+        setCurrentSession(mapSessionFromDb(sessionData))
+        setCurrentPlayer(mapPlayerFromDb(playerData, authUserId))
+
+        const nextPhase: GamePhase = sessionData.status === 'playing'
+          ? 'play'
+          : sessionData.status === 'finished'
+            ? 'results'
+            : 'lobby'
+
+        setPhase(nextPhase)
+      } catch (err) {
+        console.error('Error restoring session:', err)
+        if (isActive) clearActiveSession()
+      }
+    }
+
+    void restoreSession()
+    return () => {
+      isActive = false
+    }
+  }, [clearActiveSession, ensureAuth, getPlayerById, getPlayerBySession, getQuizByCode, getSessionById])
 
   const handleCreateQuiz = async (quiz: Omit<Quiz, 'id' | 'createdAt' | 'code'>) => {
     try {
@@ -69,6 +216,12 @@ function App() {
         answers: [],
         isHost: hostPlayer.is_host,
         userId: hostPlayer.user_id ?? authUserId,
+      })
+
+      writeStoredSession({
+        sessionId: dbSession.id,
+        playerId: hostPlayer.id,
+        quizCode: dbSession.code,
       })
       
       setPhase('lobby')
@@ -135,6 +288,12 @@ function App() {
         isHost: player.is_host,
         userId: player.user_id ?? authUserId,
       })
+
+      writeStoredSession({
+        sessionId: session.id,
+        playerId: player.id,
+        quizCode: session.code,
+      })
       
       setPhase('lobby')
     } catch (err) {
@@ -198,7 +357,7 @@ function App() {
             session={currentSession}
             quiz={currentQuiz}
             onStart={handleStartGame}
-            onBack={() => setPhase('home')}
+            onBack={clearActiveSession}
             isHost={currentPlayer?.isHost ?? false}
           />
         )
@@ -215,7 +374,7 @@ function App() {
         return (
           <Results
             session={currentSession}
-            onBack={() => setPhase('home')}
+            onBack={clearActiveSession}
           />
         )
       default:

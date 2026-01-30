@@ -210,6 +210,43 @@ export function useSupabase() {
     return data as Player[]
   }, [ensureAuth])
 
+  const getSessionById = useCallback(async (sessionId: string) => {
+    await ensureAuth()
+    const { data, error } = await supabase
+      .from('game_sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .maybeSingle()
+
+    if (error) throw error
+    return data as GameSession | null
+  }, [ensureAuth])
+
+  const getPlayerById = useCallback(async (playerId: string) => {
+    await ensureAuth()
+    const { data, error } = await supabase
+      .from('players')
+      .select('*')
+      .eq('id', playerId)
+      .maybeSingle()
+
+    if (error) throw error
+    return data as Player | null
+  }, [ensureAuth])
+
+  const getPlayerBySession = useCallback(async (sessionId: string) => {
+    const authUserId = await ensureAuth()
+    const { data, error } = await supabase
+      .from('players')
+      .select('*')
+      .eq('session_id', sessionId)
+      .eq('user_id', authUserId)
+      .maybeSingle()
+
+    if (error) throw error
+    return data as Player | null
+  }, [ensureAuth])
+
   const updateSessionStatus = useCallback(async (sessionId: string, status: 'waiting' | 'playing' | 'finished') => {
     await ensureAuth()
     const { error } = await supabase
@@ -286,6 +323,9 @@ export function useSupabase() {
     updateSessionStatus,
     submitAnswer,
     getWaitingSessionByCode,
+    getSessionById,
+    getPlayerById,
+    getPlayerBySession,
     subscribeToSession
   }
 }
