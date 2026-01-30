@@ -80,6 +80,9 @@ const mapSessionFromDb = (sessionData: DbGameSession): GameSession => ({
   players: [],
   currentQuestionIndex: sessionData.current_question_index ?? 0,
   hostId: sessionData.host_id,
+  startedAt: sessionData.started_at ? new Date(sessionData.started_at) : null,
+  endedAt: sessionData.ended_at ? new Date(sessionData.ended_at) : null,
+  updatedAt: sessionData.updated_at ? new Date(sessionData.updated_at) : null,
 })
 
 const mapPlayerFromDb = (playerData: DbPlayer, fallbackUserId: string): Player => ({
@@ -97,7 +100,7 @@ function App() {
   const [currentSession, setCurrentSession] = useState<GameSession | null>(null)
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   
-  const { createQuiz, createGameSession, joinGame, updateSessionStatus, getQuizByCode, getWaitingSessionByCode, getSessionById, getPlayerById, getPlayerBySession, ensureAuth, loading, error } = useSupabase()
+  const { createQuiz, createGameSession, joinGame, updateSessionState, getQuizByCode, getWaitingSessionByCode, getSessionById, getPlayerById, getPlayerBySession, subscribeToGameSession, ensureAuth, loading, error } = useSupabase()
 
   const clearActiveSession = useCallback(() => {
     clearStoredSession()
@@ -170,7 +173,39 @@ function App() {
     }
   }, [clearActiveSession, ensureAuth, getPlayerById, getPlayerBySession, getQuizByCode, getSessionById])
 
-  const handleCreateQuiz = async (quiz: Omit<Quiz, 'id' | 'createdAt' | 'code'>) => {
+  useEffect(() => {
+    if (!currentSession?.id) return
+    const unsubscribe = subscribeToGameSession(currentSession.id, (payload) => {
+      const updated = payload.new as Partial<DbGameSession>
+      if (!updated || typeof updated !== 'object') return
+
+      setCurrentSession((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          status: updated.status ?? prev.status,
+          currentQuestionIndex: typeof updated.current_question_index === 'number'
+            ? updated.current_question_index
+            : prev.currentQuestionIndex,
+          startedAt: updated.started_at ? new Date(updated.started_at) : prev.startedAt ?? null,
+          endedAt: updated.ended_at ? new Date(updated.ended_at) : prev.endedAt ?? null,
+          updatedAt: updated.updated_at ? new Date(updated.updated_at) : prev.updatedAt ?? null,
+        }
+      })
+
+      if (updated.status === 'playing') {
+        setPhase('play')
+      } else if (updated.status === 'finished') {
+        setPhase('results')
+      } else if (updated.status === 'waiting') {
+        setPhase('lobby')
+      }
+    })
+
+    return unsubscribe
+  }, [currentSession?.id, subscribeToGameSession])
+
+  const handleCreateQuiz = async (quiz: Omit<Quiz, 'id' | 'createdAt' | 'code'>, hostName: string) => {
     try {
       const authUserId = await ensureAuth()
       
@@ -205,10 +240,13 @@ function App() {
         players: [],
         currentQuestionIndex: dbSession.current_question_index ?? 0,
         hostId: dbSession.host_id,
+        startedAt: dbSession.started_at ? new Date(dbSession.started_at) : null,
+        endedAt: dbSession.ended_at ? new Date(dbSession.ended_at) : null,
+        updatedAt: dbSession.updated_at ? new Date(dbSession.updated_at) : null,
       }
       setCurrentSession(session)
       
-      const hostPlayer = await joinGame(dbSession.id, 'Host', true)
+      const hostPlayer = await joinGame(dbSession.id, hostName, true)
       setCurrentPlayer({
         id: hostPlayer.id,
         name: hostPlayer.name,
@@ -276,6 +314,9 @@ function App() {
         players: [],
         currentQuestionIndex: existingSession.current_question_index,
         hostId: existingSession.host_id,
+        startedAt: existingSession.started_at ? new Date(existingSession.started_at) : null,
+        endedAt: existingSession.ended_at ? new Date(existingSession.ended_at) : null,
+        updatedAt: existingSession.updated_at ? new Date(existingSession.updated_at) : null,
       }
       setCurrentSession(session)
       
@@ -305,8 +346,19 @@ function App() {
   const handleStartGame = async () => {
     if (currentSession) {
       try {
-        await updateSessionStatus(currentSession.id, 'playing')
-        setCurrentSession({ ...currentSession, status: 'playing' })
+        const now = new Date().toISOString()
+        await updateSessionState(currentSession.id, {
+          status: 'playing',
+          currentQuestionIndex: 0,
+          startedAt: now,
+        })
+        setCurrentSession({
+          ...currentSession,
+          status: 'playing',
+          currentQuestionIndex: 0,
+          startedAt: new Date(now),
+          updatedAt: new Date(now),
+        })
         setPhase('play')
       } catch (err) {
         console.error('Error starting game:', err)
@@ -315,14 +367,6 @@ function App() {
   }
 
   const handleGameEnd = async () => {
-    if (currentSession) {
-      try {
-        await updateSessionStatus(currentSession.id, 'finished')
-        setCurrentSession({ ...currentSession, status: 'finished' })
-      } catch (err) {
-        console.error('Error ending game:', err)
-      }
-    }
     setPhase('results')
   }
 

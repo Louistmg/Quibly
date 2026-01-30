@@ -5,7 +5,7 @@ import { Button as CustomButton } from '@/components/ui/custom-button'
 import type { GameSession, Player as UiPlayer } from '@/types'
 import type { Player as DbPlayer } from '@/lib/supabase'
 import { useSupabase } from '@/hooks/useSupabase'
-import { CrownIcon, Medal01Icon, ArrowLeft01Icon, StarsIcon } from 'hugeicons-react'
+import { CrownIcon, Medal01Icon, ArrowLeft01Icon } from 'hugeicons-react'
 
 interface ResultsProps {
   session: GameSession | null
@@ -104,7 +104,6 @@ export function Results({ session, onBack }: ResultsProps) {
             <div className="w-16 h-16 rounded-xl bg-[hsl(var(--answer-yellow))] flex items-center justify-center">
               <CrownIcon className="w-8 h-8 text-white" />
             </div>
-            <StarsIcon className="w-6 h-6 text-[hsl(var(--answer-yellow))]" />
           </div>
           <h1 className="text-3xl font-medium text-foreground mb-2">Partie terminée</h1>
           <p className="text-lg text-muted-foreground">
