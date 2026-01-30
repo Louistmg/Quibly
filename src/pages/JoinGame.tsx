@@ -67,7 +67,7 @@ export function JoinGame({ onJoin, onBack, isLoading }: JoinGameProps) {
 
               <CustomButton
                 variant="primary"
-                onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
+                type="submit"
                 className="w-full"
                 disabled={!code.trim() || !playerName.trim() || isLoading}
                 icon={<ArrowRight01Icon className="w-5 h-5" />}
