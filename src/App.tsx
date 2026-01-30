@@ -4,6 +4,7 @@ import { Home } from '@/pages/Home'
 import { CreateQuiz } from '@/pages/CreateQuiz'
 import { JoinGame } from '@/pages/JoinGame'
 import { GameLobby } from '@/pages/GameLobby'
+import { HostGame } from '@/pages/HostGame'
 import { PlayGame } from '@/pages/PlayGame'
 import { Results } from '@/pages/Results'
 import { useSupabase } from '@/hooks/useSupabase'
@@ -15,20 +16,38 @@ type PublicQuizPayload = DbQuiz & { questions: (DbQuestion & { answers: DbPublic
 type StoredSession = {
   sessionId: string
   quizCode: string
+  role: 'host' | 'player'
   playerId?: string
 }
 
 const ACTIVE_SESSION_KEY = 'quibly:active-session'
 
-const isStoredSession = (value: unknown): value is StoredSession => {
-  if (!value || typeof value !== 'object') return false
+const normalizeStoredSession = (value: unknown): StoredSession | null => {
+  if (!value || typeof value !== 'object') return null
   const record = value as Record<string, unknown>
   const sessionId = record.sessionId
   const quizCode = record.quizCode
+  const role = record.role
   const playerId = record.playerId
-  return typeof sessionId === 'string'
-    && typeof quizCode === 'string'
-    && (typeof playerId === 'string' || typeof playerId === 'undefined')
+
+  if (typeof sessionId !== 'string' || typeof quizCode !== 'string') return null
+
+  if (role === 'host' || role === 'player') {
+    return {
+      sessionId,
+      quizCode,
+      role,
+      playerId: typeof playerId === 'string' ? playerId : undefined,
+    }
+  }
+
+  const inferredRole: StoredSession['role'] = typeof playerId === 'string' ? 'player' : 'host'
+  return {
+    sessionId,
+    quizCode,
+    role: inferredRole,
+    playerId: typeof playerId === 'string' ? playerId : undefined,
+  }
 }
 
 const readStoredSession = (): StoredSession | null => {
@@ -37,7 +56,7 @@ const readStoredSession = (): StoredSession | null => {
   if (!raw) return null
   try {
     const parsed: unknown = JSON.parse(raw)
-    return isStoredSession(parsed) ? parsed : null
+    return normalizeStoredSession(parsed)
   } catch {
     return null
   }
@@ -77,9 +96,11 @@ const mapSessionFromDb = (sessionData: DbGameSession): GameSession => ({
   quizId: sessionData.quiz_id,
   code: sessionData.code,
   status: sessionData.status,
+  phase: sessionData.phase ?? 'question',
   players: [],
   currentQuestionIndex: sessionData.current_question_index ?? 0,
   hostId: sessionData.host_id,
+  questionStartedAt: sessionData.question_started_at ? new Date(sessionData.question_started_at) : null,
   startedAt: sessionData.started_at ? new Date(sessionData.started_at) : null,
   endedAt: sessionData.ended_at ? new Date(sessionData.ended_at) : null,
   updatedAt: sessionData.updated_at ? new Date(sessionData.updated_at) : null,
@@ -99,6 +120,7 @@ function App() {
   const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null)
   const [currentSession, setCurrentSession] = useState<GameSession | null>(null)
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
+  const [isHost, setIsHost] = useState(false)
   
   const { createQuiz, createGameSession, joinGame, updateSessionState, getQuizByCode, getWaitingSessionByCode, getSessionById, getPlayerById, getPlayerBySession, subscribeToGameSession, ensureAuth, loading, error } = useSupabase()
 
@@ -107,6 +129,7 @@ function App() {
     setCurrentQuiz(null)
     setCurrentSession(null)
     setCurrentPlayer(null)
+    setIsHost(false)
     setPhase('home')
   }, [])
 
@@ -135,24 +158,29 @@ function App() {
           return
         }
 
-        let playerData: DbPlayer | null = null
-        if (stored.playerId) {
-          playerData = await getPlayerById(stored.playerId)
-        }
-        if (!playerData) {
-          playerData = await getPlayerBySession(stored.sessionId)
-        }
+        const isHostRole = stored.role === 'host' || sessionData.host_id === authUserId
+        setIsHost(isHostRole)
 
-        if (!playerData) {
-          if (isActive) clearActiveSession()
-          return
+        let playerData: DbPlayer | null = null
+        if (!isHostRole) {
+          if (stored.playerId) {
+            playerData = await getPlayerById(stored.playerId)
+          }
+          if (!playerData) {
+            playerData = await getPlayerBySession(stored.sessionId)
+          }
+
+          if (!playerData) {
+            if (isActive) clearActiveSession()
+            return
+          }
         }
 
         if (!isActive) return
 
         setCurrentQuiz(mapQuizFromDb(quizData))
         setCurrentSession(mapSessionFromDb(sessionData))
-        setCurrentPlayer(mapPlayerFromDb(playerData, authUserId))
+        setCurrentPlayer(playerData ? mapPlayerFromDb(playerData, authUserId) : null)
 
         const nextPhase: GamePhase = sessionData.status === 'playing'
           ? 'play'
@@ -184,9 +212,13 @@ function App() {
         return {
           ...prev,
           status: updated.status ?? prev.status,
+          phase: updated.phase ?? prev.phase,
           currentQuestionIndex: typeof updated.current_question_index === 'number'
             ? updated.current_question_index
             : prev.currentQuestionIndex,
+          questionStartedAt: updated.question_started_at
+            ? new Date(updated.question_started_at)
+            : prev.questionStartedAt ?? null,
           startedAt: updated.started_at ? new Date(updated.started_at) : prev.startedAt ?? null,
           endedAt: updated.ended_at ? new Date(updated.ended_at) : prev.endedAt ?? null,
           updatedAt: updated.updated_at ? new Date(updated.updated_at) : prev.updatedAt ?? null,
@@ -205,10 +237,41 @@ function App() {
     return unsubscribe
   }, [currentSession?.id, subscribeToGameSession])
 
-  const handleCreateQuiz = async (quiz: Omit<Quiz, 'id' | 'createdAt' | 'code'>, hostName: string) => {
+  useEffect(() => {
+    if (!currentSession?.id) return
+    let isActive = true
+
+    const syncSession = async () => {
+      try {
+        const dbSession = await getSessionById(currentSession.id)
+        if (!dbSession || !isActive) return
+        const nextSession = mapSessionFromDb(dbSession)
+        setCurrentSession(nextSession)
+
+        if (dbSession.status === 'playing') {
+          setPhase('play')
+        } else if (dbSession.status === 'finished') {
+          setPhase('results')
+        } else {
+          setPhase('lobby')
+        }
+      } catch (err) {
+        console.error('Error syncing session:', err)
+      }
+    }
+
+    void syncSession()
+    const interval = setInterval(syncSession, 3000)
+
+    return () => {
+      isActive = false
+      clearInterval(interval)
+    }
+  }, [currentSession?.id, getSessionById])
+
+  const handleCreateQuiz = async (quiz: Omit<Quiz, 'id' | 'createdAt' | 'code'>) => {
     try {
-      const authUserId = await ensureAuth()
-      
+      await ensureAuth()
       const questionsForDb = quiz.questions.map(q => ({
         text: q.text,
         time_limit: q.timeLimit,
@@ -235,29 +298,23 @@ function App() {
         quizId: dbSession.quiz_id,
         code: dbSession.code,
         status: 'waiting',
+        phase: dbSession.phase ?? 'question',
         players: [],
         currentQuestionIndex: dbSession.current_question_index ?? 0,
         hostId: dbSession.host_id,
+        questionStartedAt: dbSession.question_started_at ? new Date(dbSession.question_started_at) : null,
         startedAt: dbSession.started_at ? new Date(dbSession.started_at) : null,
         endedAt: dbSession.ended_at ? new Date(dbSession.ended_at) : null,
         updatedAt: dbSession.updated_at ? new Date(dbSession.updated_at) : null,
       }
       setCurrentSession(session)
-      
-      const hostPlayer = await joinGame(dbSession.id, hostName, true)
-      setCurrentPlayer({
-        id: hostPlayer.id,
-        name: hostPlayer.name,
-        score: hostPlayer.score,
-        answers: [],
-        isHost: hostPlayer.is_host,
-        userId: hostPlayer.user_id ?? authUserId,
-      })
 
+      setCurrentPlayer(null)
+      setIsHost(true)
       writeStoredSession({
         sessionId: dbSession.id,
-        playerId: hostPlayer.id,
         quizCode: dbSession.code,
+        role: 'host',
       })
       
       setPhase('lobby')
@@ -270,6 +327,7 @@ function App() {
   const handleJoinGame = async (code: string, playerName: string) => {
     try {
       const authUserId = await ensureAuth()
+      setIsHost(false)
       const quizData = await getQuizByCode(code)
       
       if (!quizData) {
@@ -309,16 +367,18 @@ function App() {
         quizId: existingSession.quiz_id,
         code: existingSession.code,
         status: existingSession.status,
+        phase: existingSession.phase ?? 'question',
         players: [],
         currentQuestionIndex: existingSession.current_question_index,
         hostId: existingSession.host_id,
+        questionStartedAt: existingSession.question_started_at ? new Date(existingSession.question_started_at) : null,
         startedAt: existingSession.started_at ? new Date(existingSession.started_at) : null,
         endedAt: existingSession.ended_at ? new Date(existingSession.ended_at) : null,
         updatedAt: existingSession.updated_at ? new Date(existingSession.updated_at) : null,
       }
       setCurrentSession(session)
       
-      const player = await joinGame(session.id, playerName, false)
+      const player = await joinGame(session.id, playerName)
       setCurrentPlayer({
         id: player.id,
         name: player.name,
@@ -332,6 +392,7 @@ function App() {
         sessionId: session.id,
         playerId: player.id,
         quizCode: session.code,
+        role: 'player',
       })
       
       setPhase('lobby')
@@ -348,12 +409,16 @@ function App() {
         await updateSessionState(currentSession.id, {
           status: 'playing',
           currentQuestionIndex: 0,
+          phase: 'question',
+          questionStartedAt: now,
           startedAt: now,
         })
         setCurrentSession({
           ...currentSession,
           status: 'playing',
+          phase: 'question',
           currentQuestionIndex: 0,
+          questionStartedAt: new Date(now),
           startedAt: new Date(now),
           updatedAt: new Date(now),
         })
@@ -362,10 +427,6 @@ function App() {
         console.error('Error starting game:', err)
       }
     }
-  }
-
-  const handleGameEnd = async () => {
-    setPhase('results')
   }
 
   const renderPhase = () => {
@@ -400,16 +461,20 @@ function App() {
             quiz={currentQuiz}
             onStart={handleStartGame}
             onBack={clearActiveSession}
-            isHost={currentPlayer?.isHost ?? false}
+            isHost={isHost}
           />
         )
       case 'play':
-        return (
+        return isHost ? (
+          <HostGame
+            session={currentSession}
+            quiz={currentQuiz}
+          />
+        ) : (
           <PlayGame
             session={currentSession}
             quiz={currentQuiz}
             player={currentPlayer}
-            onEnd={handleGameEnd}
           />
         )
       case 'results':

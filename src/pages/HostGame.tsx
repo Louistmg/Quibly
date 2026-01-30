@@ -1,0 +1,331 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { StopWatchIcon, ArrowRight01Icon, Tick02Icon } from 'hugeicons-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button as CustomButton } from '@/components/ui/custom-button'
+import type { GameSession, Player as UiPlayer, Quiz, Answer } from '@/types'
+import type { Player as DbPlayer } from '@/lib/supabase'
+import { useSupabase } from '@/hooks/useSupabase'
+
+type AnswerStat = {
+  id: string
+  text: string
+  color: 'red' | 'blue' | 'yellow' | 'green'
+  count: number
+}
+
+type AnswerStats = {
+  total_players: number
+  total_answers: number
+  correct_answer_id: string | null
+  answers: AnswerStat[]
+}
+
+interface HostGameProps {
+  session: GameSession | null
+  quiz: Quiz | null
+}
+
+const getAnswerBgClass = (color: Answer['color']) => {
+  switch (color) {
+    case 'red': return 'bg-[hsl(var(--answer-red))]'
+    case 'blue': return 'bg-[hsl(var(--answer-blue))]'
+    case 'yellow': return 'bg-[hsl(var(--answer-yellow))] text-foreground'
+    case 'green': return 'bg-[hsl(var(--answer-green))]'
+  }
+}
+
+export function HostGame({ session, quiz }: HostGameProps) {
+  const [players, setPlayers] = useState<UiPlayer[]>([])
+  const [answerStats, setAnswerStats] = useState<AnswerStats | null>(null)
+  const [timeRemaining, setTimeRemaining] = useState(0)
+  const [isLoadingStats, setIsLoadingStats] = useState(false)
+  const { getPlayers, subscribeToSession, getAnswerStats, updateSessionState } = useSupabase()
+
+  const phase = session?.phase ?? 'question'
+  const currentQuestionIndex = session?.currentQuestionIndex ?? 0
+  const currentQuestion = quiz?.questions[currentQuestionIndex]
+  const isLastQuestion = currentQuestionIndex >= ((quiz?.questions.length ?? 1) - 1)
+
+  const mapDbPlayers = useCallback((dbPlayers: DbPlayer[]): UiPlayer[] => {
+    return dbPlayers.map((p) => ({
+      id: p.id,
+      name: p.name,
+      score: p.score,
+      answers: [],
+      isHost: p.is_host,
+      userId: p.user_id ?? '',
+    }))
+  }, [])
+
+  const loadPlayers = useCallback(async () => {
+    if (!session?.id) return
+    try {
+      const data = await getPlayers(session.id)
+      setPlayers(mapDbPlayers(data))
+    } catch (err) {
+      console.error('Erreur lors du chargement des joueurs :', err)
+    }
+  }, [getPlayers, mapDbPlayers, session?.id])
+
+  const loadAnswerStats = useCallback(async () => {
+    if (!session?.id || !currentQuestion) return
+    setIsLoadingStats(true)
+    try {
+      const stats = await getAnswerStats(session.id, currentQuestion.id)
+      setAnswerStats(stats)
+    } catch (err) {
+      console.error('Erreur lors du chargement des réponses :', err)
+    } finally {
+      setIsLoadingStats(false)
+    }
+  }, [currentQuestion, getAnswerStats, session?.id])
+
+  useEffect(() => {
+    void loadPlayers()
+  }, [loadPlayers])
+
+  useEffect(() => {
+    if (!session?.id) return
+    const unsubscribe = subscribeToSession(session.id, () => {
+      void loadPlayers()
+    })
+    return unsubscribe
+  }, [loadPlayers, session?.id, subscribeToSession])
+
+  useEffect(() => {
+    if (!currentQuestion || phase === 'scoreboard') return
+    void loadAnswerStats()
+    const interval = setInterval(loadAnswerStats, phase === 'question' ? 1000 : 2000)
+    return () => clearInterval(interval)
+  }, [currentQuestion, loadAnswerStats, phase])
+
+  useEffect(() => {
+    if (!currentQuestion || phase !== 'question') return
+    const startTime = session?.questionStartedAt ?? session?.updatedAt ?? new Date()
+    const tick = () => {
+      const elapsedSeconds = Math.floor((Date.now() - startTime.getTime()) / 1000)
+      const remaining = Math.max(0, currentQuestion.timeLimit - elapsedSeconds)
+      setTimeRemaining(remaining)
+    }
+    tick()
+    const interval = setInterval(tick, 500)
+    return () => clearInterval(interval)
+  }, [currentQuestion, phase, session?.questionStartedAt, session?.updatedAt])
+
+  useEffect(() => {
+    if (!session?.id || phase !== 'question') return
+    if (timeRemaining === 0) {
+      void updateSessionState(session.id, { phase: 'results' })
+    }
+  }, [phase, session?.id, timeRemaining, updateSessionState])
+
+  useEffect(() => {
+    if (!session?.id || phase !== 'question' || !answerStats) return
+    if (answerStats.total_players > 0 && answerStats.total_answers >= answerStats.total_players) {
+      void updateSessionState(session.id, { phase: 'results' })
+    }
+  }, [answerStats, phase, session?.id, updateSessionState])
+
+  const totalPlayers = useMemo(() => {
+    return players.filter((p) => !p.isHost).length
+  }, [players])
+
+  const rankedPlayers = useMemo(() => {
+    return players
+      .filter((p) => !p.isHost)
+      .sort((a, b) => b.score - a.score)
+  }, [players])
+
+  const answersWithCounts = useMemo(() => {
+    if (!currentQuestion) return []
+    const statsMap = new Map(answerStats?.answers.map((answer) => [answer.id, answer]) ?? [])
+    return currentQuestion.answers.map((answer) => ({
+      ...answer,
+      count: statsMap.get(answer.id)?.count ?? 0
+    }))
+  }, [answerStats, currentQuestion])
+
+  const totalAnswers = answerStats?.total_answers ?? 0
+  const totalPlayersForStats = answerStats?.total_players ?? totalPlayers
+  const correctAnswerId = answerStats?.correct_answer_id ?? null
+
+  const handleShowResults = async () => {
+    if (!session?.id) return
+    await updateSessionState(session.id, { phase: 'results' })
+  }
+
+  const handleShowScoreboard = async () => {
+    if (!session?.id) return
+    await updateSessionState(session.id, { phase: 'scoreboard' })
+  }
+
+  const handleNextQuestion = async () => {
+    if (!session?.id || !quiz) return
+    const now = new Date().toISOString()
+    await updateSessionState(session.id, {
+      currentQuestionIndex: currentQuestionIndex + 1,
+      phase: 'question',
+      questionStartedAt: now,
+    })
+  }
+
+  const handleFinishGame = async () => {
+    if (!session?.id) return
+    const now = new Date().toISOString()
+    await updateSessionState(session.id, { status: 'finished', endedAt: now })
+  }
+
+  if (!currentQuestion) return null
+
+  return (
+    <div className="min-h-screen bg-background p-6">
+      <div className="container mx-auto max-w-6xl space-y-6">
+        <div className="text-center space-y-3">
+          <p className="text-sm uppercase tracking-wider text-muted-foreground">
+            Question {currentQuestionIndex + 1} / {quiz?.questions.length}
+          </p>
+          <h1 className="text-3xl md:text-4xl font-medium text-foreground">
+            {currentQuestion.text}
+          </h1>
+          <div className="flex items-center justify-center gap-3 text-muted-foreground">
+            <StopWatchIcon className="w-5 h-5" />
+            <span className="text-lg font-medium">{timeRemaining}s</span>
+            <span className="text-sm">·</span>
+            <span className="text-sm">{totalAnswers}/{totalPlayers} réponses</span>
+          </div>
+        </div>
+
+        {phase === 'question' && (
+          <Card className="border border-border shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-medium">En attente des réponses</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[hsl(var(--answer-green))] transition-all duration-500"
+                  style={{ width: totalPlayersForStats > 0 ? `${Math.min(100, Math.round((totalAnswers / totalPlayersForStats) * 100))}%` : '0%' }}
+                />
+              </div>
+              <div className="flex justify-end">
+                <CustomButton
+                  variant="secondary"
+                  onClick={handleShowResults}
+                  icon={<ArrowRight01Icon className="w-5 h-5" />}
+                >
+                  Afficher les résultats
+                </CustomButton>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {phase === 'results' && (
+          <Card className="border border-border shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-medium">Répartition des réponses</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {isLoadingStats ? (
+                <p className="text-sm text-muted-foreground">Chargement des réponses...</p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {answersWithCounts.map((answer) => {
+                    const percentage = totalPlayersForStats > 0 ? Math.round((answer.count / totalPlayersForStats) * 100) : 0
+                    const isCorrect = correctAnswerId === answer.id
+                    return (
+                      <div key={answer.id} className="space-y-3">
+                        <div className="flex items-end h-40 bg-muted/50 rounded-xl p-3">
+                          <div
+                            className={`w-full rounded-lg transition-all duration-500 ${getAnswerBgClass(answer.color)}`}
+                            style={{ height: `${Math.max(4, percentage)}%` }}
+                          />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-base font-medium text-foreground">{answer.text}</p>
+                          <p className="text-sm text-muted-foreground">{answer.count} réponse(s)</p>
+                          {isCorrect && (
+                            <span className="inline-flex items-center gap-1 text-sm text-[hsl(var(--answer-green))]">
+                              <Tick02Icon className="w-4 h-4" />
+                              Bonne réponse
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                <CustomButton
+                  variant="primary"
+                  onClick={handleShowScoreboard}
+                  icon={<ArrowRight01Icon className="w-5 h-5" />}
+                >
+                  Afficher le classement
+                </CustomButton>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {phase === 'scoreboard' && (
+          <Card className="border border-border shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-medium">Classement provisoire</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {rankedPlayers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Aucun joueur pour le moment.</p>
+              ) : (
+                <div className="space-y-3">
+                  {rankedPlayers.map((player, index) => (
+                    <div
+                      key={player.id}
+                      className="flex items-center justify-between p-4 bg-muted/40 rounded-xl border border-border transition-all duration-500"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center font-medium">
+                          {(player.name?.[0] ?? '?').toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{player.name}</p>
+                          <p className="text-sm text-muted-foreground">#{index + 1}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-medium text-foreground">{player.score}</p>
+                        <p className="text-sm text-muted-foreground">pts</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                {isLastQuestion ? (
+                  <CustomButton
+                    variant="primary"
+                    onClick={handleFinishGame}
+                    icon={<ArrowRight01Icon className="w-5 h-5" />}
+                  >
+                    Terminer la partie
+                  </CustomButton>
+                ) : (
+                  <CustomButton
+                    variant="primary"
+                    onClick={handleNextQuestion}
+                    icon={<ArrowRight01Icon className="w-5 h-5" />}
+                  >
+                    Question suivante
+                  </CustomButton>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  )
+}

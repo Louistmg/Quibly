@@ -8,7 +8,7 @@ import { ArrowLeft01Icon, PlusSignIcon, Delete02Icon, Tick02Icon, Cancel01Icon, 
 import { v4 as uuidv4 } from 'uuid'
 
 interface CreateQuizProps {
-  onSubmit: (quiz: Omit<Quiz, 'id' | 'createdAt' | 'code'>, hostName: string) => void
+  onSubmit: (quiz: Omit<Quiz, 'id' | 'createdAt' | 'code'>) => void
   onBack: () => void
   isLoading?: boolean
 }
@@ -25,7 +25,6 @@ const getAnswerDotClass = (color: Answer['color']) => {
 export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [hostName, setHostName] = useState('')
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentQuestion, setCurrentQuestion] = useState('')
   const [currentAnswers, setCurrentAnswers] = useState<Answer[]>([
@@ -75,8 +74,8 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
   }
 
   const handleSubmit = () => {
-    if (!title.trim() || !hostName.trim() || questions.length === 0) return
-    onSubmit({ title, description, questions }, hostName.trim())
+    if (!title.trim() || questions.length === 0) return
+    onSubmit({ title, description, questions })
   }
 
   return (
@@ -94,15 +93,6 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
             <CardTitle className="text-lg font-medium">Informations générales</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground mb-2 block">Votre pseudo (hôte)</label>
-              <Input
-                placeholder="Exemple : Alex"
-                value={hostName}
-                onChange={(e) => setHostName(e.target.value)}
-                className="border-border focus-visible:ring-foreground"
-              />
-            </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-2 block">Titre du quiz</label>
               <Input
@@ -251,7 +241,7 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
         <CustomButton
           variant="primary"
           onClick={handleSubmit}
-          disabled={!title.trim() || !hostName.trim() || questions.length === 0 || isLoading}
+          disabled={!title.trim() || questions.length === 0 || isLoading}
           className="w-full"
           icon={<RocketIcon className="w-5 h-5" />}
         >

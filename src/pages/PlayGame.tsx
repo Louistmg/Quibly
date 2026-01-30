@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { StopWatchIcon, CrownIcon, Tick02Icon, Cancel02Icon } from 'hugeicons-react'
 import { GameSession, Quiz, Player, Question, Answer } from '@/types'
 import { useSupabase } from '@/hooks/useSupabase'
+import type { Player as DbPlayer } from '@/lib/supabase'
 
 interface PlayGameProps {
   session: GameSession | null
   quiz: Quiz | null
   player: Player | null
-  onEnd: () => void
 }
 
 const getAnswerColorClass = (_: Answer['color'], selected: boolean, showCorrect: boolean, isCorrect: boolean) => {
@@ -37,28 +37,66 @@ const getAnswerShape = (color: Answer['color']) => {
   }
 }
 
-export function PlayGame({ session, quiz, player, onEnd }: PlayGameProps) {
+export function PlayGame({ session, quiz, player }: PlayGameProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
-  const [showResult, setShowResult] = useState(false)
   const [score, setScore] = useState(() => player?.score ?? 0)
   const [answerResult, setAnswerResult] = useState<{ isCorrect: boolean; pointsEarned: number; correctAnswerId: string | null } | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { submitAnswer, updateSessionState } = useSupabase()
-  const isHost = player?.isHost ?? false
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
+  const { submitAnswer, getPlayers, subscribeToSession } = useSupabase()
 
   const currentQuestionIndex = session?.currentQuestionIndex ?? 0
   const currentQuestion: Question | undefined = quiz?.questions[currentQuestionIndex]
+  const phase = session?.phase ?? 'question'
+  const showResult = phase === 'results'
   
   const [timeRemaining, setTimeRemaining] = useState(() => currentQuestion?.timeLimit ?? 0)
   const hasSubmittedRef = useRef(false)
+  const [players, setPlayers] = useState<Player[]>([])
+
+  const mapDbPlayers = useCallback((dbPlayers: DbPlayer[]): Player[] => {
+    return dbPlayers
+      .filter((p) => !p.is_host)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        score: p.score,
+        answers: [],
+        isHost: p.is_host,
+        userId: p.user_id ?? '',
+      }))
+  }, [])
+
+  const loadPlayers = useCallback(async () => {
+    if (!session?.id) return
+    try {
+      const data = await getPlayers(session.id)
+      setPlayers(mapDbPlayers(data))
+    } catch (err) {
+      console.error('Erreur lors du chargement des joueurs :', err)
+    }
+  }, [getPlayers, mapDbPlayers, session?.id])
+
+  useEffect(() => {
+    if (phase !== 'scoreboard') return
+    void loadPlayers()
+  }, [loadPlayers, phase])
+
+  useEffect(() => {
+    if (!session?.id || phase !== 'scoreboard') return
+    const unsubscribe = subscribeToSession(session.id, () => {
+      void loadPlayers()
+    })
+    return unsubscribe
+  }, [loadPlayers, phase, session?.id, subscribeToSession])
 
   const handleAnswer = useCallback(async (answerId: string | null) => {
-    if (!currentQuestion || showResult || !player || isSubmitting || hasSubmittedRef.current) return
+    if (!currentQuestion || !player || isSubmitting || hasSubmittedRef.current || phase !== 'question') return
 
     hasSubmittedRef.current = true
     setSelectedAnswer(answerId)
-    setShowResult(true)
     setIsSubmitting(true)
+    setSubmissionError(null)
 
     try {
       const result = await submitAnswer(player.id, currentQuestion.id, answerId, timeRemaining)
@@ -75,16 +113,13 @@ export function PlayGame({ session, quiz, player, onEnd }: PlayGameProps) {
       }
     } catch (err) {
       console.error('Error submitting answer:', err)
-      setAnswerResult({
-        isCorrect: false,
-        pointsEarned: 0,
-        correctAnswerId: null,
-      })
+      setAnswerResult(null)
+      setSubmissionError('Impossible de valider la réponse pour le moment.')
     } finally {
       setIsSubmitting(false)
     }
 
-  }, [currentQuestion, timeRemaining, showResult, player, submitAnswer, isSubmitting])
+  }, [currentQuestion, timeRemaining, player, submitAnswer, isSubmitting, phase])
 
   useEffect(() => {
     if (!player) return
@@ -92,17 +127,17 @@ export function PlayGame({ session, quiz, player, onEnd }: PlayGameProps) {
   }, [player?.id, player?.score, player])
 
   useEffect(() => {
-    if (!currentQuestion) return
+    if (!currentQuestion || phase !== 'question') return
     hasSubmittedRef.current = false
     setSelectedAnswer(null)
     setAnswerResult(null)
-    setShowResult(false)
+    setSubmissionError(null)
     setTimeRemaining(currentQuestion.timeLimit)
-  }, [currentQuestion])
+  }, [currentQuestion, phase])
 
   useEffect(() => {
-    if (!currentQuestion) return
-    const startTime = session?.updatedAt ?? new Date()
+    if (!currentQuestion || phase !== 'question') return
+    const startTime = session?.questionStartedAt ?? session?.updatedAt ?? new Date()
     const tick = () => {
       const elapsedSeconds = Math.floor((Date.now() - startTime.getTime()) / 1000)
       const remaining = Math.max(0, currentQuestion.timeLimit - elapsedSeconds)
@@ -111,37 +146,29 @@ export function PlayGame({ session, quiz, player, onEnd }: PlayGameProps) {
     tick()
     const interval = setInterval(tick, 500)
     return () => clearInterval(interval)
-  }, [currentQuestion, session?.updatedAt])
+  }, [currentQuestion, phase, session?.questionStartedAt, session?.updatedAt])
 
   useEffect(() => {
-    if (!currentQuestion || showResult || hasSubmittedRef.current) return
+    if (!currentQuestion || phase !== 'question' || hasSubmittedRef.current) return
     if (timeRemaining === 0) {
       void handleAnswer(null)
     }
-  }, [currentQuestion, timeRemaining, showResult, handleAnswer])
+  }, [currentQuestion, timeRemaining, phase, handleAnswer])
 
-  useEffect(() => {
-    if (!isHost || !session?.id || !quiz || !currentQuestion) return
-    if (timeRemaining > 0) return
-    const isLastQuestion = currentQuestionIndex >= (quiz.questions.length - 1)
-    const timeout = setTimeout(async () => {
-      try {
-        if (isLastQuestion) {
-          const now = new Date().toISOString()
-          await updateSessionState(session.id, { status: 'finished', endedAt: now })
-          onEnd()
-        } else {
-          await updateSessionState(session.id, { currentQuestionIndex: currentQuestionIndex + 1 })
-        }
-      } catch (err) {
-        console.error('Error advancing question:', err)
-      }
-    }, 2500)
-
-    return () => clearTimeout(timeout)
-  }, [currentQuestion, currentQuestionIndex, isHost, onEnd, quiz, session?.id, timeRemaining, updateSessionState])
+  const rankedPlayers = useMemo(() => {
+    return [...players].sort((a, b) => b.score - a.score)
+  }, [players])
 
   if (!currentQuestion) return null
+
+  const selectedAnswerText = selectedAnswer
+    ? currentQuestion.answers.find((answer) => answer.id === selectedAnswer)?.text ?? null
+    : null
+
+  const correctAnswerText = answerResult?.correctAnswerId
+    ? currentQuestion.answers.find((answer) => answer.id === answerResult.correctAnswerId)?.text ?? null
+    : null
+  const canAnswer = phase === 'question'
 
   return (
     <div className="min-h-screen bg-[#1a1a2e] text-white p-4">
@@ -201,15 +228,15 @@ export function PlayGame({ session, quiz, player, onEnd }: PlayGameProps) {
           return (
             <button
               key={answer.id}
-              onClick={() => !showResult && handleAnswer(answer.id)}
-              disabled={showResult}
+              onClick={() => canAnswer && handleAnswer(answer.id)}
+              disabled={!canAnswer}
               className={`
                 relative h-32 md:h-40 rounded-2xl font-medium text-xl md:text-2xl
                 transition-all duration-300 transform hover:scale-105
                 ${getAnswerBgClass(answer.color)}
                 ${getAnswerShape(answer.color)}
                 ${getAnswerColorClass(answer.color, isSelected, canShowCorrect, isCorrect)}
-                ${showResult ? 'cursor-default' : 'cursor-pointer shadow-lg hover:shadow-xl'}
+                ${canAnswer ? 'cursor-pointer shadow-lg hover:shadow-xl' : 'cursor-default'}
               `}
             >
               <span className="relative z-10 px-4">{answer.text}</span>
@@ -232,8 +259,13 @@ export function PlayGame({ session, quiz, player, onEnd }: PlayGameProps) {
 
       {/* Result Message */}
       {showResult && (
-        <div className="text-center mt-8">
-          {answerResult?.isCorrect ? (
+        <div className="text-center mt-8 space-y-4">
+          {submissionError ? (
+            <div className="inline-flex items-center gap-2 bg-destructive/10 text-destructive px-6 py-3 rounded-full font-medium text-lg">
+              <Cancel02Icon className="w-6 h-6" />
+              {submissionError}
+            </div>
+          ) : answerResult?.isCorrect ? (
             <div className="inline-flex items-center gap-2 bg-[hsl(var(--answer-green))] text-white px-6 py-3 rounded-full font-medium text-xl">
               <Tick02Icon className="w-6 h-6" />
               Bonne réponse ! +{answerResult.pointsEarned} pts
@@ -247,6 +279,56 @@ export function PlayGame({ session, quiz, player, onEnd }: PlayGameProps) {
             <div className="inline-flex items-center gap-2 bg-white/20 text-white px-6 py-3 rounded-full font-medium text-xl">
               <StopWatchIcon className="w-6 h-6" />
               Temps écoulé
+            </div>
+          )}
+
+          {!submissionError && (
+            <div className="text-sm text-white/70">
+              {selectedAnswerText && (
+                <p>
+                  Votre réponse : <span className="text-white font-medium">{selectedAnswerText}</span>
+                </p>
+              )}
+              {correctAnswerText && (
+                <p>
+                  Bonne réponse : <span className="text-white font-medium">{correctAnswerText}</span>
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {phase === 'scoreboard' && (
+        <div className="text-center mt-8">
+          <div className="inline-flex items-center gap-2 bg-white/10 px-6 py-3 rounded-full text-white/80 text-lg mb-6">
+            <CrownIcon className="w-5 h-5 text-[hsl(var(--answer-yellow))]" />
+            Classement provisoire
+          </div>
+          {rankedPlayers.length === 0 ? (
+            <p className="text-white/70 text-lg">Aucun joueur pour le moment.</p>
+          ) : (
+            <div className="max-w-xl mx-auto space-y-3">
+              {rankedPlayers.map((rankedPlayer, index) => (
+                <div
+                  key={rankedPlayer.id}
+                  className="flex items-center justify-between p-4 bg-white/10 rounded-xl border border-white/10 transition-all duration-500"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center font-medium">
+                      {(rankedPlayer.name?.[0] ?? '?').toUpperCase()}
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-white">{rankedPlayer.name}</p>
+                      <p className="text-sm text-white/60">#{index + 1}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-medium text-white">{rankedPlayer.score}</p>
+                    <p className="text-sm text-white/60">pts</p>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
