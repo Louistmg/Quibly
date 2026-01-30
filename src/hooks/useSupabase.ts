@@ -316,42 +316,70 @@ export function useSupabase() {
   }, [ensureAuth])
 
   const subscribeToSession = useCallback((sessionId: string, callback: (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => void) => {
-    const subscription = supabase
-      .channel(`session:${sessionId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'game_sessions',
-        filter: `id=eq.${sessionId}`
-      }, callback)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'players',
-        filter: `session_id=eq.${sessionId}`
-      }, callback)
-      .subscribe()
+    let subscription: ReturnType<typeof supabase.channel> | null = null
+    let isClosed = false
+
+    const start = async () => {
+      try {
+        await ensureAuth()
+        if (isClosed) return
+        subscription = supabase
+          .channel(`session:${sessionId}`)
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'game_sessions',
+            filter: `id=eq.${sessionId}`
+          }, callback)
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'players',
+            filter: `session_id=eq.${sessionId}`
+          }, callback)
+          .subscribe()
+      } catch (err) {
+        console.error('Realtime subscription failed:', err)
+      }
+    }
+
+    void start()
 
     return () => {
-      subscription.unsubscribe()
+      isClosed = true
+      subscription?.unsubscribe()
     }
-  }, [])
+  }, [ensureAuth])
 
   const subscribeToGameSession = useCallback((sessionId: string, callback: (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => void) => {
-    const subscription = supabase
-      .channel(`game-session:${sessionId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'game_sessions',
-        filter: `id=eq.${sessionId}`
-      }, callback)
-      .subscribe()
+    let subscription: ReturnType<typeof supabase.channel> | null = null
+    let isClosed = false
+
+    const start = async () => {
+      try {
+        await ensureAuth()
+        if (isClosed) return
+        subscription = supabase
+          .channel(`game-session:${sessionId}`)
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'game_sessions',
+            filter: `id=eq.${sessionId}`
+          }, callback)
+          .subscribe()
+      } catch (err) {
+        console.error('Realtime subscription failed:', err)
+      }
+    }
+
+    void start()
 
     return () => {
-      subscription.unsubscribe()
+      isClosed = true
+      subscription?.unsubscribe()
     }
-  }, [])
+  }, [ensureAuth])
 
   return {
     loading,
