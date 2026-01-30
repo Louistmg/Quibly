@@ -37,28 +37,25 @@ const getAnswerShape = (color: Answer['color']) => {
   }
 }
 
-export function PlayGame({ quiz, player, onEnd }: PlayGameProps) {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+export function PlayGame({ session, quiz, player, onEnd }: PlayGameProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [showResult, setShowResult] = useState(false)
-  const [score, setScore] = useState(0)
+  const [score, setScore] = useState(() => player?.score ?? 0)
   const [answerResult, setAnswerResult] = useState<{ isCorrect: boolean; pointsEarned: number; correctAnswerId: string | null } | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { submitAnswer } = useSupabase()
+  const { submitAnswer, updateSessionState } = useSupabase()
+  const isHost = player?.isHost ?? false
 
+  const currentQuestionIndex = session?.currentQuestionIndex ?? 0
   const currentQuestion: Question | undefined = quiz?.questions[currentQuestionIndex]
   
-  // Initialize timeRemaining based on current question
-  const [timeRemaining, setTimeRemaining] = useState(() => 
-    currentQuestion?.timeLimit ?? 0
-  )
-  
-  // Track previous question to detect changes
-  const prevQuestionRef = useRef<Question | undefined>(undefined)
+  const [timeRemaining, setTimeRemaining] = useState(() => currentQuestion?.timeLimit ?? 0)
+  const hasSubmittedRef = useRef(false)
 
   const handleAnswer = useCallback(async (answerId: string | null) => {
-    if (!currentQuestion || showResult || !player || isSubmitting) return
+    if (!currentQuestion || showResult || !player || isSubmitting || hasSubmittedRef.current) return
 
+    hasSubmittedRef.current = true
     setSelectedAnswer(answerId)
     setShowResult(true)
     setIsSubmitting(true)
@@ -87,42 +84,62 @@ export function PlayGame({ quiz, player, onEnd }: PlayGameProps) {
       setIsSubmitting(false)
     }
 
-    setTimeout(() => {
-      if (currentQuestionIndex < (quiz?.questions.length || 0) - 1) {
-        setCurrentQuestionIndex(prev => prev + 1)
-      } else {
-        onEnd()
-      }
-    }, 2500)
-  }, [currentQuestion, currentQuestionIndex, quiz, timeRemaining, onEnd, showResult, player, submitAnswer, isSubmitting])
+  }, [currentQuestion, timeRemaining, showResult, player, submitAnswer, isSubmitting])
 
-  // Reset state when question changes using a microtask to avoid sync setState
   useEffect(() => {
-    if (currentQuestion && currentQuestion.id !== prevQuestionRef.current?.id) {
-      prevQuestionRef.current = currentQuestion
-      // Use Promise.resolve to defer state updates to next tick
-      Promise.resolve().then(() => {
-        setTimeRemaining(currentQuestion.timeLimit)
-        setSelectedAnswer(null)
-        setAnswerResult(null)
-        setShowResult(false)
-      })
-    }
+    if (!player) return
+    setScore(player.score)
+  }, [player?.id, player?.score, player])
+
+  useEffect(() => {
+    if (!currentQuestion) return
+    hasSubmittedRef.current = false
+    setSelectedAnswer(null)
+    setAnswerResult(null)
+    setShowResult(false)
+    setTimeRemaining(currentQuestion.timeLimit)
   }, [currentQuestion])
 
   useEffect(() => {
-    if (timeRemaining > 0 && !showResult && !selectedAnswer) {
-      const timer = setTimeout(() => {
-        setTimeRemaining(prev => prev - 1)
-      }, 1000)
-      return () => clearTimeout(timer)
-    } else if (timeRemaining === 0 && !showResult && !selectedAnswer) {
-      // Use microtask to avoid sync setState in effect
-      Promise.resolve().then(() => {
-        handleAnswer(null)
-      })
+    if (!currentQuestion) return
+    const startTime = session?.updatedAt ?? new Date()
+    const tick = () => {
+      const elapsedSeconds = Math.floor((Date.now() - startTime.getTime()) / 1000)
+      const remaining = Math.max(0, currentQuestion.timeLimit - elapsedSeconds)
+      setTimeRemaining(remaining)
     }
-  }, [timeRemaining, showResult, selectedAnswer, handleAnswer])
+    tick()
+    const interval = setInterval(tick, 500)
+    return () => clearInterval(interval)
+  }, [currentQuestion, session?.updatedAt])
+
+  useEffect(() => {
+    if (!currentQuestion || showResult || hasSubmittedRef.current) return
+    if (timeRemaining === 0) {
+      void handleAnswer(null)
+    }
+  }, [currentQuestion, timeRemaining, showResult, handleAnswer])
+
+  useEffect(() => {
+    if (!isHost || !session?.id || !quiz || !currentQuestion) return
+    if (timeRemaining > 0) return
+    const isLastQuestion = currentQuestionIndex >= (quiz.questions.length - 1)
+    const timeout = setTimeout(async () => {
+      try {
+        if (isLastQuestion) {
+          const now = new Date().toISOString()
+          await updateSessionState(session.id, { status: 'finished', endedAt: now })
+          onEnd()
+        } else {
+          await updateSessionState(session.id, { currentQuestionIndex: currentQuestionIndex + 1 })
+        }
+      } catch (err) {
+        console.error('Error advancing question:', err)
+      }
+    }, 2500)
+
+    return () => clearTimeout(timeout)
+  }, [currentQuestion, currentQuestionIndex, isHost, onEnd, quiz, session?.id, timeRemaining, updateSessionState])
 
   if (!currentQuestion) return null
 

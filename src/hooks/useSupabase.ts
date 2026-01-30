@@ -257,6 +257,33 @@ export function useSupabase() {
     if (error) throw error
   }, [ensureAuth])
 
+  const updateSessionState = useCallback(async (
+    sessionId: string,
+    updates: {
+      status?: 'waiting' | 'playing' | 'finished'
+      currentQuestionIndex?: number
+      startedAt?: string | null
+      endedAt?: string | null
+    }
+  ) => {
+    await ensureAuth()
+    const payload: Record<string, unknown> = {
+      updated_at: new Date().toISOString()
+    }
+
+    if (typeof updates.status !== 'undefined') payload.status = updates.status
+    if (typeof updates.currentQuestionIndex === 'number') payload.current_question_index = updates.currentQuestionIndex
+    if (typeof updates.startedAt !== 'undefined') payload.started_at = updates.startedAt
+    if (typeof updates.endedAt !== 'undefined') payload.ended_at = updates.endedAt
+
+    const { error } = await supabase
+      .from('game_sessions')
+      .update(payload)
+      .eq('id', sessionId)
+
+    if (error) throw error
+  }, [ensureAuth])
+
   const submitAnswer = useCallback(async (
     playerId: string, 
     questionId: string, 
@@ -310,6 +337,22 @@ export function useSupabase() {
     }
   }, [])
 
+  const subscribeToGameSession = useCallback((sessionId: string, callback: (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => void) => {
+    const subscription = supabase
+      .channel(`game-session:${sessionId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'game_sessions',
+        filter: `id=eq.${sessionId}`
+      }, callback)
+      .subscribe()
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
+
   return {
     loading,
     error,
@@ -321,11 +364,13 @@ export function useSupabase() {
     joinGame,
     getPlayers,
     updateSessionStatus,
+    updateSessionState,
     submitAnswer,
     getWaitingSessionByCode,
     getSessionById,
     getPlayerById,
     getPlayerBySession,
-    subscribeToSession
+    subscribeToSession,
+    subscribeToGameSession
   }
 }

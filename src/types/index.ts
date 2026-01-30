@@ -48,6 +48,9 @@ export type GameSession = {
   players: Player[];
   currentQuestionIndex: number;
   hostId: string;
+  startedAt?: Date | null;
+  endedAt?: Date | null;
+  updatedAt?: Date | null;
 };
 
 export type GamePhase = 'home' | 'create' | 'join' | 'lobby' | 'play' | 'results';
