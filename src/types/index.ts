@@ -45,9 +45,11 @@ export type GameSession = {
   quizId: string;
   code: string;
   status: 'waiting' | 'playing' | 'finished';
+  phase: 'question' | 'results' | 'scoreboard';
   players: Player[];
   currentQuestionIndex: number;
   hostId: string;
+  questionStartedAt?: Date | null;
   startedAt?: Date | null;
   endedAt?: Date | null;
   updatedAt?: Date | null;

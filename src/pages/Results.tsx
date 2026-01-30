@@ -44,14 +44,16 @@ export function Results({ session, onBack }: ResultsProps) {
   const { getPlayers, subscribeToSession } = useSupabase()
 
   const mapDbPlayers = useCallback((dbPlayers: DbPlayer[]): UiPlayer[] => {
-    return dbPlayers.map((p) => ({
-      id: p.id,
-      name: p.name,
-      score: p.score,
-      answers: [],
-      isHost: p.is_host,
-      userId: p.user_id ?? '',
-    }))
+    return dbPlayers
+      .filter((p) => !p.is_host)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        score: p.score,
+        answers: [],
+        isHost: p.is_host,
+        userId: p.user_id ?? '',
+      }))
   }, [])
 
   const loadPlayers = useCallback(async () => {

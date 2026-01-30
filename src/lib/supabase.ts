@@ -49,8 +49,10 @@ export type GameSession = {
   quiz_id: string
   code: string
   status: 'waiting' | 'playing' | 'finished'
+  phase: 'question' | 'results' | 'scoreboard'
   current_question_index: number
   host_id: string
+  question_started_at: string | null
   started_at: string | null
   ended_at: string | null
   created_at: string

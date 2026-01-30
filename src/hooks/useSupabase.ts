@@ -10,6 +10,13 @@ type SubmitAnswerResult = {
   new_score: number | null
 }
 
+type AnswerStats = {
+  total_players: number
+  total_answers: number
+  correct_answer_id: string | null
+  answers: { id: string; text: string; color: 'red' | 'blue' | 'yellow' | 'green'; count: number }[]
+}
+
 const QUIZ_CODE_LENGTH = 6
 const QUIZ_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
@@ -163,13 +170,13 @@ export function useSupabase() {
     }
   }, [ensureAuth])
 
-  const joinGame = useCallback(async (sessionId: string, name: string, isHost = false) => {
+  const joinGame = useCallback(async (sessionId: string, name: string) => {
     setLoading(true)
     try {
       const authUserId = await ensureAuth()
       const { data, error } = await supabase
         .from('players')
-        .insert([{ session_id: sessionId, name, is_host: isHost, user_id: authUserId }])
+        .insert([{ session_id: sessionId, name, is_host: false, user_id: authUserId }])
         .select()
         .single()
 
@@ -261,7 +268,9 @@ export function useSupabase() {
     sessionId: string,
     updates: {
       status?: 'waiting' | 'playing' | 'finished'
+      phase?: 'question' | 'results' | 'scoreboard'
       currentQuestionIndex?: number
+      questionStartedAt?: string | null
       startedAt?: string | null
       endedAt?: string | null
     }
@@ -272,7 +281,9 @@ export function useSupabase() {
     }
 
     if (typeof updates.status !== 'undefined') payload.status = updates.status
+    if (typeof updates.phase !== 'undefined') payload.phase = updates.phase
     if (typeof updates.currentQuestionIndex === 'number') payload.current_question_index = updates.currentQuestionIndex
+    if (typeof updates.questionStartedAt !== 'undefined') payload.question_started_at = updates.questionStartedAt
     if (typeof updates.startedAt !== 'undefined') payload.started_at = updates.startedAt
     if (typeof updates.endedAt !== 'undefined') payload.ended_at = updates.endedAt
 
@@ -313,6 +324,17 @@ export function useSupabase() {
       return null
     }
     return session as GameSession
+  }, [ensureAuth])
+
+  const getAnswerStats = useCallback(async (sessionId: string, questionId: string) => {
+    await ensureAuth()
+    const { data, error } = await supabase.rpc('get_answer_stats', {
+      session_id_input: sessionId,
+      question_id_input: questionId
+    })
+
+    if (error) throw error
+    return data as AnswerStats
   }, [ensureAuth])
 
   const subscribeToSession = useCallback((sessionId: string, callback: (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => void) => {
@@ -395,6 +417,7 @@ export function useSupabase() {
     updateSessionState,
     submitAnswer,
     getWaitingSessionByCode,
+    getAnswerStats,
     getSessionById,
     getPlayerById,
     getPlayerBySession,
