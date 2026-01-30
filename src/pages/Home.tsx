@@ -26,6 +26,7 @@ export function Home({ onCreate, onJoin }: HomeProps) {
           <CustomButton
             variant="secondary"
             icon={<GithubIcon className="w-4 h-4" />}
+            onClick={() => window.open('https://github.com/Louistmg/Quibly', '_blank')}
           >
             Star
           </CustomButton>
