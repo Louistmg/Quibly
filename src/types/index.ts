@@ -1,40 +1,46 @@
-export interface Answer {
+export type AnswerColor = 'red' | 'blue' | 'yellow' | 'green';
+
+export type Answer = {
   id: string;
   text: string;
-  isCorrect: boolean;
-  color: 'red' | 'blue' | 'yellow' | 'green';
-}
+  color: AnswerColor;
+  isCorrect?: boolean;
+};
 
-export interface Question {
+export type Question = {
   id: string;
   text: string;
   answers: Answer[];
   timeLimit: number;
   points: number;
-}
+};
 
-export interface Quiz {
+export type Quiz = {
   id: string;
   title: string;
   description: string;
   questions: Question[];
   createdAt: Date;
   code: string;
-}
+};
 
-export interface Player {
+export type PlayerAnswer = {
+  questionId: string;
+  answerId: string | null;
+  timeRemaining: number;
+  isCorrect: boolean;
+};
+
+export type Player = {
   id: string;
   name: string;
   score: number;
-  answers: {
-    questionId: string;
-    answerId: string;
-    timeRemaining: number;
-    isCorrect: boolean;
-  }[];
-}
+  answers: PlayerAnswer[];
+  isHost: boolean;
+  userId: string;
+};
 
-export interface GameSession {
+export type GameSession = {
   id: string;
   quizId: string;
   code: string;
@@ -42,6 +48,6 @@ export interface GameSession {
   players: Player[];
   currentQuestionIndex: number;
   hostId: string;
-}
+};
 
 export type GamePhase = 'home' | 'create' | 'join' | 'lobby' | 'play' | 'results';

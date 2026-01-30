@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { GamePhase, Quiz, GameSession, Player } from '@/types'
 import { Home } from '@/pages/Home'
 import { CreateQuiz } from '@/pages/CreateQuiz'
@@ -7,8 +7,6 @@ import { GameLobby } from '@/pages/GameLobby'
 import { PlayGame } from '@/pages/PlayGame'
 import { Results } from '@/pages/Results'
 import { useSupabase } from '@/hooks/useSupabase'
-import { supabase } from '@/lib/supabase'
-import { v4 as uuidv4 } from 'uuid'
 import './App.css'
 
 function App() {
@@ -17,11 +15,17 @@ function App() {
   const [currentSession, setCurrentSession] = useState<GameSession | null>(null)
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   
-  const { createQuiz, createGameSession, joinGame, updateSessionStatus, getQuizByCode, loading, error } = useSupabase()
+  const { createQuiz, createGameSession, joinGame, updateSessionStatus, getQuizByCode, getWaitingSessionByCode, ensureAuth, loading, error } = useSupabase()
+
+  useEffect(() => {
+    ensureAuth().catch((err: unknown) => {
+      console.error('Auth error:', err)
+    })
+  }, [ensureAuth])
 
   const handleCreateQuiz = async (quiz: Omit<Quiz, 'id' | 'createdAt' | 'code'>) => {
     try {
-      const newHostId = uuidv4()
+      const authUserId = await ensureAuth()
       
       const questionsForDb = quiz.questions.map(q => ({
         text: q.text,
@@ -29,7 +33,7 @@ function App() {
         points: q.points,
         answers: q.answers.map(a => ({
           text: a.text,
-          is_correct: a.isCorrect,
+          is_correct: a.isCorrect ?? false,
           color: a.color
         }))
       }))
@@ -44,7 +48,7 @@ function App() {
       }
       setCurrentQuiz(newQuiz)
       
-      const dbSession = await createGameSession(dbQuiz.id, newHostId)
+      const dbSession = await createGameSession(dbQuiz.id)
       
       const session: GameSession = {
         id: dbSession.id,
@@ -52,8 +56,8 @@ function App() {
         code: dbSession.code,
         status: 'waiting',
         players: [],
-        currentQuestionIndex: 0,
-        hostId: newHostId,
+        currentQuestionIndex: dbSession.current_question_index ?? 0,
+        hostId: dbSession.host_id,
       }
       setCurrentSession(session)
       
@@ -63,6 +67,8 @@ function App() {
         name: hostPlayer.name,
         score: hostPlayer.score,
         answers: [],
+        isHost: hostPlayer.is_host,
+        userId: hostPlayer.user_id ?? authUserId,
       })
       
       setPhase('lobby')
@@ -74,6 +80,7 @@ function App() {
 
   const handleJoinGame = async (code: string, playerName: string) => {
     try {
+      const authUserId = await ensureAuth()
       const quizData = await getQuizByCode(code)
       
       if (!quizData) {
@@ -95,45 +102,27 @@ function App() {
           answers: q.answers.map(a => ({
             id: a.id,
             text: a.text,
-            isCorrect: a.is_correct,
             color: a.color,
           })),
         })),
       }
       setCurrentQuiz(quiz)
       
-      const { data: existingSession } = await supabase
-        .from('game_sessions')
-        .select('*')
-        .eq('quiz_id', quizData.id)
-        .eq('status', 'waiting')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-      
-      let session: GameSession
-      
-      if (existingSession) {
-        session = {
-          id: existingSession.id,
-          quizId: existingSession.quiz_id,
-          code: existingSession.code,
-          status: existingSession.status,
-          players: [],
-          currentQuestionIndex: existingSession.current_question_index,
-          hostId: existingSession.host_id,
-        }
-      } else {
-        const dbSession = await createGameSession(quizData.id, uuidv4())
-        session = {
-          id: dbSession.id,
-          quizId: dbSession.quiz_id,
-          code: dbSession.code,
-          status: 'waiting',
-          players: [],
-          currentQuestionIndex: 0,
-          hostId: dbSession.host_id,
-        }
+      const existingSession = await getWaitingSessionByCode(code)
+
+      if (!existingSession) {
+        alert('Aucune partie en attente pour ce code')
+        return
+      }
+
+      const session: GameSession = {
+        id: existingSession.id,
+        quizId: existingSession.quiz_id,
+        code: existingSession.code,
+        status: existingSession.status,
+        players: [],
+        currentQuestionIndex: existingSession.current_question_index,
+        hostId: existingSession.host_id,
       }
       setCurrentSession(session)
       
@@ -143,6 +132,8 @@ function App() {
         name: player.name,
         score: player.score,
         answers: [],
+        isHost: player.is_host,
+        userId: player.user_id ?? authUserId,
       })
       
       setPhase('lobby')
@@ -205,11 +196,10 @@ function App() {
         return (
           <GameLobby
             session={currentSession}
-            player={currentPlayer}
             quiz={currentQuiz}
             onStart={handleStartGame}
             onBack={() => setPhase('home')}
-            isHost={currentPlayer?.name === 'Host'}
+            isHost={currentPlayer?.isHost ?? false}
           />
         )
       case 'play':

@@ -60,29 +60,6 @@ export function Home({ onCreate, onJoin }: HomeProps) {
         </div>
       </section>
 
-      <section id="stats" className="border-y border-border bg-secondary/30 mb-24">
-        <div className="container mx-auto px-6 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <p className="text-3xl font-medium mb-1">10k+</p>
-              <p className="text-sm text-muted-foreground">Quiz créés</p>
-            </div>
-            <div>
-              <p className="text-3xl font-medium mb-1">50k+</p>
-              <p className="text-sm text-muted-foreground">Parties jouées</p>
-            </div>
-            <div>
-              <p className="text-3xl font-medium mb-1">100k+</p>
-              <p className="text-sm text-muted-foreground">Joueurs actifs</p>
-            </div>
-            <div>
-              <p className="text-3xl font-medium mb-1">4.8/5</p>
-              <p className="text-sm text-muted-foreground">Note moyenne</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section id="fonctionnalites" className="container mx-auto px-6 py-36">
         <div className="text-center mb-12">
           <h2 className="text-2xl md:text-3xl font-medium mb-3">Fonctionnalités</h2>

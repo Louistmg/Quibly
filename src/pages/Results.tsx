@@ -1,20 +1,16 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button as CustomButton } from '@/components/ui/custom-button'
-import { GameSession } from '@/types'
+import type { GameSession, Player as UiPlayer } from '@/types'
+import type { Player as DbPlayer } from '@/lib/supabase'
+import { useSupabase } from '@/hooks/useSupabase'
 import { CrownIcon, Medal01Icon, ArrowLeft01Icon, StarsIcon } from 'hugeicons-react'
 
 interface ResultsProps {
   session: GameSession | null
   onBack: () => void
 }
-
-const mockResults = [
-  { id: '2', name: 'Lucas', score: 1250, rank: 1 },
-  { id: '1', name: 'Marie', score: 1100, rank: 2 },
-  { id: '3', name: 'Emma', score: 950, rank: 3 },
-  { id: '4', name: 'Thomas', score: 800, rank: 4 },
-]
 
 const getRankIcon = (rank: number) => {
   switch (rank) {
@@ -42,8 +38,57 @@ const getRankStyle = (rank: number) => {
   }
 }
 
-export function Results({ onBack }: ResultsProps) {
-  const winner = mockResults[0]
+export function Results({ session, onBack }: ResultsProps) {
+  const [players, setPlayers] = useState<UiPlayer[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const { getPlayers, subscribeToSession } = useSupabase()
+
+  const mapDbPlayers = useCallback((dbPlayers: DbPlayer[]): UiPlayer[] => {
+    return dbPlayers.map((p) => ({
+      id: p.id,
+      name: p.name,
+      score: p.score,
+      answers: [],
+      isHost: p.is_host,
+      userId: p.user_id ?? '',
+    }))
+  }, [])
+
+  const loadPlayers = useCallback(async () => {
+    if (!session?.id) return
+    setIsLoading(true)
+    try {
+      const data = await getPlayers(session.id)
+      setPlayers(mapDbPlayers(data))
+    } catch (err) {
+      console.error('Erreur lors du chargement des résultats :', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [getPlayers, mapDbPlayers, session?.id])
+
+  useEffect(() => {
+    void loadPlayers()
+  }, [loadPlayers])
+
+  useEffect(() => {
+    if (!session?.id) return
+    const unsubscribe = subscribeToSession(session.id, () => {
+      void loadPlayers()
+    })
+    return unsubscribe
+  }, [loadPlayers, session?.id, subscribeToSession])
+
+  const rankedPlayers = useMemo(() => {
+    return [...players]
+      .sort((a, b) => b.score - a.score)
+      .map((p, index) => ({
+        ...p,
+        rank: index + 1,
+      }))
+  }, [players])
+
+  const winner = rankedPlayers[0]
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -63,7 +108,13 @@ export function Results({ onBack }: ResultsProps) {
           </div>
           <h1 className="text-3xl font-medium text-foreground mb-2">Partie terminée</h1>
           <p className="text-lg text-muted-foreground">
-            Félicitations à <span className="font-medium text-foreground">{winner.name}</span>
+            {winner ? (
+              <>
+                Félicitations à <span className="font-medium text-foreground">{winner.name}</span>
+              </>
+            ) : (
+              'Aucun joueur pour le moment.'
+            )}
           </p>
         </div>
 
@@ -76,35 +127,41 @@ export function Results({ onBack }: ResultsProps) {
               </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {mockResults.map((player) => (
-              <div
-                key={player.id}
-                className={`
-                  flex items-center gap-4 p-4 border-b last:border-b-0
-                  ${getRankStyle(player.rank)}
-                  ${player.rank <= 3 ? 'border-l-4' : 'border-l-4 border-l-transparent'}
-                `}
-              >
-                <div className="w-10 flex justify-center">
-                  {getRankIcon(player.rank)}
+            {isLoading ? (
+              <div className="p-6 text-sm text-muted-foreground">Chargement des résultats...</div>
+            ) : rankedPlayers.length === 0 ? (
+              <div className="p-6 text-sm text-muted-foreground">Aucun résultat disponible.</div>
+            ) : (
+              rankedPlayers.map((player) => (
+                <div
+                  key={player.id}
+                  className={`
+                    flex items-center gap-4 p-4 border-b last:border-b-0
+                    ${getRankStyle(player.rank)}
+                    ${player.rank <= 3 ? 'border-l-4' : 'border-l-4 border-l-transparent'}
+                  `}
+                >
+                  <div className="w-10 flex justify-center">
+                    {getRankIcon(player.rank)}
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center font-medium">
+                    {(player.name?.[0] ?? '?').toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <p className={`font-medium text-lg ${player.rank === 1 ? 'text-[hsl(var(--answer-yellow))]' : 'text-foreground'}`}>
+                      {player.name}
+                    </p>
+                    {player.rank === 1 && (
+                      <p className="text-sm text-[hsl(var(--answer-yellow))]">Gagnant</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-medium">{player.score}</p>
+                    <p className="text-sm text-muted-foreground">points</p>
+                  </div>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center font-medium">
-                  {player.name[0].toUpperCase()}
-                </div>
-                <div className="flex-1">
-                  <p className={`font-medium text-lg ${player.rank === 1 ? 'text-[hsl(var(--answer-yellow))]' : 'text-foreground'}`}>
-                    {player.name}
-                  </p>
-                  {player.rank === 1 && (
-                    <p className="text-sm text-[hsl(var(--answer-yellow))]">Gagnant</p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-medium">{player.score}</p>
-                  <p className="text-sm text-muted-foreground">points</p>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 

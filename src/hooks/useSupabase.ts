@@ -1,20 +1,81 @@
 import { useState, useCallback } from 'react'
-import { supabase, type Quiz, type Question, type Answer, type GameSession, type Player } from '@/lib/supabase'
+import { supabase, type Quiz, type Question, type PublicAnswer, type GameSession, type Player } from '@/lib/supabase'
+
+type PublicQuiz = Quiz & { questions: (Question & { answers: PublicAnswer[] })[] }
+
+type SubmitAnswerResult = {
+  is_correct: boolean
+  points_earned: number
+  correct_answer_id: string | null
+  new_score: number | null
+}
+
+const QUIZ_CODE_LENGTH = 6
+const QUIZ_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+
+const generateQuizCode = () => {
+  const values = new Uint32Array(QUIZ_CODE_LENGTH)
+  crypto.getRandomValues(values)
+  return Array.from(values, (value) => QUIZ_CODE_CHARS[value % QUIZ_CODE_CHARS.length]).join('')
+}
 
 export function useSupabase() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  const ensureAuth = useCallback(async () => {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) throw sessionError
+
+    const existingUserId = sessionData.session?.user?.id
+    if (existingUserId) {
+      setUserId(existingUserId)
+      return existingUserId
+    }
+
+    const { data, error: signInError } = await supabase.auth.signInAnonymously()
+    if (signInError) throw signInError
+
+    const signedInUserId = data.user?.id
+    if (!signedInUserId) {
+      throw new Error('Authentication failed.')
+    }
+
+    setUserId(signedInUserId)
+    return signedInUserId
+  }, [])
 
   const createQuiz = useCallback(async (title: string, description: string, questions: { text: string; time_limit: number; points: number; answers: { text: string; is_correct: boolean; color: 'red' | 'blue' | 'yellow' | 'green' }[] }[]) => {
     setLoading(true)
     try {
-      const { data: quiz, error: quizError } = await supabase
-        .from('quizzes')
-        .insert([{ title, description, host_id: crypto.randomUUID() }])
-        .select()
-        .single()
+      const hostId = await ensureAuth()
+      const maxAttempts = 5
+      let quiz: Quiz | null = null
+      let lastError: unknown = null
 
-      if (quizError) throw quizError
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const code = generateQuizCode()
+        const { data, error: quizError } = await supabase
+          .from('quizzes')
+          .insert([{ title, description, host_id: hostId, code }])
+          .select()
+          .single()
+
+        if (!quizError) {
+          quiz = data as Quiz
+          break
+        }
+
+        lastError = quizError
+        if ((quizError as { code?: string }).code !== '23505') {
+          throw quizError
+        }
+      }
+
+      if (!quiz) {
+        throw lastError
+      }
 
       for (let i = 0; i < questions.length; i++) {
         const q = questions[i]
@@ -54,33 +115,28 @@ export function useSupabase() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [ensureAuth])
 
   const getQuizByCode = useCallback(async (code: string) => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('quizzes')
-        .select(`
-          *,
-          questions:questions(*, answers:answers(*))
-        `)
-        .eq('code', code)
-        .single()
+      await ensureAuth()
+      const { data, error } = await supabase.rpc('get_quiz_by_code_public', { code_input: code })
 
       if (error) throw error
-      return data as Quiz & { questions: (Question & { answers: Answer[] })[] }
+      return data as PublicQuiz | null
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'))
       throw err
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [ensureAuth])
 
-  const createGameSession = useCallback(async (quizId: string, hostId: string) => {
+  const createGameSession = useCallback(async (quizId: string) => {
     setLoading(true)
     try {
+      const hostId = await ensureAuth()
       const { data: quiz } = await supabase
         .from('quizzes')
         .select('code')
@@ -105,14 +161,15 @@ export function useSupabase() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [ensureAuth])
 
   const joinGame = useCallback(async (sessionId: string, name: string, isHost = false) => {
     setLoading(true)
     try {
+      const authUserId = await ensureAuth()
       const { data, error } = await supabase
         .from('players')
-        .insert([{ session_id: sessionId, name, is_host: isHost }])
+        .insert([{ session_id: sessionId, name, is_host: isHost, user_id: authUserId }])
         .select()
         .single()
 
@@ -124,9 +181,10 @@ export function useSupabase() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [ensureAuth])
 
   const getPlayers = useCallback(async (sessionId: string) => {
+    await ensureAuth()
     const { data, error } = await supabase
       .from('players')
       .select('*')
@@ -135,56 +193,43 @@ export function useSupabase() {
 
     if (error) throw error
     return data as Player[]
-  }, [])
+  }, [ensureAuth])
 
   const updateSessionStatus = useCallback(async (sessionId: string, status: 'waiting' | 'playing' | 'finished') => {
+    await ensureAuth()
     const { error } = await supabase
       .from('game_sessions')
       .update({ status, updated_at: new Date().toISOString() })
       .eq('id', sessionId)
 
     if (error) throw error
-  }, [])
+  }, [ensureAuth])
 
   const submitAnswer = useCallback(async (
     playerId: string, 
     questionId: string, 
     answerId: string | null, 
-    timeRemaining: number,
-    isCorrect: boolean,
-    pointsEarned: number
+    timeRemaining: number
   ) => {
-    const { error } = await supabase
-      .from('player_answers')
-      .insert([{
-        player_id: playerId,
-        question_id: questionId,
-        answer_id: answerId,
-        time_remaining: timeRemaining,
-        is_correct: isCorrect,
-        points_earned: pointsEarned
-      }])
-
-    if (error) throw error
-
-    const { error: scoreError } = await supabase.rpc('increment_player_score', {
-      player_id: playerId,
-      points: pointsEarned
+    await ensureAuth()
+    const { data, error } = await supabase.rpc('submit_answer', {
+      player_id_input: playerId,
+      question_id_input: questionId,
+      answer_id_input: answerId,
+      time_remaining_input: timeRemaining
     })
 
-    if (scoreError) {
-      const { data: player } = await supabase
-        .from('players')
-        .select('score')
-        .eq('id', playerId)
-        .single()
-      
-      await supabase
-        .from('players')
-        .update({ score: (player?.score || 0) + pointsEarned })
-        .eq('id', playerId)
-    }
-  }, [])
+    if (error) throw error
+    return data as SubmitAnswerResult
+  }, [ensureAuth])
+
+  const getWaitingSessionByCode = useCallback(async (code: string) => {
+    await ensureAuth()
+    const { data, error } = await supabase.rpc('get_waiting_session_by_code', { code_input: code })
+
+    if (error) throw error
+    return data as GameSession | null
+  }, [ensureAuth])
 
   const subscribeToSession = useCallback((sessionId: string, callback: (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => void) => {
     const subscription = supabase
@@ -211,6 +256,8 @@ export function useSupabase() {
   return {
     loading,
     error,
+    userId,
+    ensureAuth,
     createQuiz,
     getQuizByCode,
     createGameSession,
@@ -218,6 +265,7 @@ export function useSupabase() {
     getPlayers,
     updateSessionStatus,
     submitAnswer,
+    getWaitingSessionByCode,
     subscribeToSession
   }
 }
