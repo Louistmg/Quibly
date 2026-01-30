@@ -9,6 +9,7 @@ interface ButtonProps {
   className?: string
   icon?: ReactNode
   disabled?: boolean
+  type?: 'button' | 'submit' | 'reset'
 }
 
 export function Button({
@@ -17,7 +18,8 @@ export function Button({
   onClick,
   className,
   icon,
-  disabled
+  disabled,
+  type
 }: ButtonProps) {
   const baseStyles = "h-12 min-w-[200px] text-sm font-medium rounded-lg inline-flex items-center justify-center"
 
@@ -30,6 +32,7 @@ export function Button({
     <ShadcnButton
       onClick={onClick}
       disabled={disabled}
+      type={type}
       className={cn(baseStyles, variants[variant], className)}
     >
       {icon && <span className="mr-2">{icon}</span>}
