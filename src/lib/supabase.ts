@@ -1,0 +1,70 @@
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+
+export const supabase = createClient(supabaseUrl, supabaseKey)
+
+export type Quiz = {
+  id: string
+  title: string
+  description: string | null
+  code: string
+  host_id: string
+  status: 'waiting' | 'playing' | 'finished'
+  created_at: string
+  updated_at: string
+}
+
+export type Question = {
+  id: string
+  quiz_id: string
+  text: string
+  time_limit: number
+  points: number
+  sort_order: number
+  created_at: string
+}
+
+export type Answer = {
+  id: string
+  question_id: string
+  text: string
+  is_correct: boolean
+  color: 'red' | 'blue' | 'yellow' | 'green'
+  sort_order: number
+  created_at: string
+}
+
+export type GameSession = {
+  id: string
+  quiz_id: string
+  code: string
+  status: 'waiting' | 'playing' | 'finished'
+  current_question_index: number
+  host_id: string
+  started_at: string | null
+  ended_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type Player = {
+  id: string
+  session_id: string
+  name: string
+  score: number
+  is_host: boolean
+  joined_at: string
+}
+
+export type PlayerAnswer = {
+  id: string
+  player_id: string
+  question_id: string
+  answer_id: string | null
+  time_remaining: number | null
+  is_correct: boolean
+  points_earned: number
+  answered_at: string
+}
