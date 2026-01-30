@@ -228,7 +228,12 @@ export function useSupabase() {
     const { data, error } = await supabase.rpc('get_waiting_session_by_code', { code_input: code })
 
     if (error) throw error
-    return data as GameSession | null
+    if (!data) return null
+    const session = Array.isArray(data) ? data[0] : data
+    if (!session || typeof session !== 'object' || !('id' in session)) {
+      return null
+    }
+    return session as GameSession
   }, [ensureAuth])
 
   const subscribeToSession = useCallback((sessionId: string, callback: (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => void) => {

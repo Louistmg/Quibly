@@ -110,7 +110,7 @@ function App() {
       
       const existingSession = await getWaitingSessionByCode(code)
 
-      if (!existingSession) {
+      if (!existingSession || !existingSession.id) {
         alert('Aucune partie en attente pour ce code')
         return
       }
