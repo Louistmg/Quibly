@@ -34,17 +34,26 @@ const getAnswerBgClass = (color: Answer['color']) => {
   }
 }
 
-export function HostGame({ session, quiz }: HostGameProps) {
-  const [players, setPlayers] = useState<UiPlayer[]>([])
-  const [answerStats, setAnswerStats] = useState<AnswerStats | null>(null)
-  const [timeRemaining, setTimeRemaining] = useState(0)
-  const [isLoadingStats, setIsLoadingStats] = useState(false)
-  const { getPlayers, subscribeToSession, getAnswerStats, updateSessionState } = useSupabase()
+const getAnswerShape = (color: Answer['color']) => {
+  switch (color) {
+    case 'red': return 'rounded-tr-2xl'
+    case 'blue': return 'rounded-tl-2xl'
+    case 'yellow': return 'rounded-br-2xl'
+    case 'green': return 'rounded-bl-2xl'
+  }
+}
 
+export function HostGame({ session, quiz }: HostGameProps) {
   const phase = session?.phase ?? 'question'
   const currentQuestionIndex = session?.currentQuestionIndex ?? 0
   const currentQuestion = quiz?.questions[currentQuestionIndex]
   const isLastQuestion = currentQuestionIndex >= ((quiz?.questions.length ?? 1) - 1)
+
+  const [players, setPlayers] = useState<UiPlayer[]>([])
+  const [answerStats, setAnswerStats] = useState<AnswerStats | null>(null)
+  const [timeRemaining, setTimeRemaining] = useState(() => currentQuestion?.timeLimit ?? 0)
+  const [isLoadingStats, setIsLoadingStats] = useState(false)
+  const { getPlayers, subscribeToSession, getAnswerStats, updateSessionState } = useSupabase()
 
   const mapDbPlayers = useCallback((dbPlayers: DbPlayer[]): UiPlayer[] => {
     return dbPlayers.map((p) => ({
@@ -101,6 +110,7 @@ export function HostGame({ session, quiz }: HostGameProps) {
 
   useEffect(() => {
     if (!currentQuestion || phase !== 'question') return
+    setTimeRemaining(currentQuestion.timeLimit)
     const startTime = session?.questionStartedAt ?? session?.updatedAt ?? new Date()
     const tick = () => {
       const elapsedSeconds = Math.floor((Date.now() - startTime.getTime()) / 1000)
@@ -113,11 +123,12 @@ export function HostGame({ session, quiz }: HostGameProps) {
   }, [currentQuestion, phase, session?.questionStartedAt, session?.updatedAt])
 
   useEffect(() => {
-    if (!session?.id || phase !== 'question') return
+    if (!session?.id || phase !== 'question' || !currentQuestion) return
+    if (!session?.questionStartedAt) return
     if (timeRemaining === 0) {
       void updateSessionState(session.id, { phase: 'results' })
     }
-  }, [phase, session?.id, timeRemaining, updateSessionState])
+  }, [currentQuestion, phase, session?.id, session?.questionStartedAt, timeRemaining, updateSessionState])
 
   useEffect(() => {
     if (!session?.id || phase !== 'question' || !answerStats) return
@@ -194,6 +205,25 @@ export function HostGame({ session, quiz }: HostGameProps) {
             <span className="text-sm">{totalAnswers}/{totalPlayers} réponses</span>
           </div>
         </div>
+
+        {phase === 'question' && (
+          <div className="grid grid-cols-2 gap-4 max-w-4xl mx-auto">
+            {currentQuestion.answers.map((answer) => (
+              <div
+                key={answer.id}
+                className={`
+                  relative h-28 md:h-36 rounded-2xl font-medium text-lg md:text-xl
+                  flex items-center justify-center text-center px-4
+                  ${getAnswerBgClass(answer.color)}
+                  ${getAnswerShape(answer.color)}
+                  opacity-90
+                `}
+              >
+                {answer.text}
+              </div>
+            ))}
+          </div>
+        )}
 
         {phase === 'question' && (
           <Card className="border border-border shadow-sm">
