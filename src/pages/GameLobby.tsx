@@ -74,7 +74,7 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
       <div className="container mx-auto max-w-4xl">
         <Button variant="ghost" onClick={onBack} className="mb-8 hover:bg-muted">
           <ArrowLeft01Icon className="w-5 h-5 mr-2" />
-          Retour
+          Quitter la partie
         </Button>
 
         <div className="text-center mb-10">
