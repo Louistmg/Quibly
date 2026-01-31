@@ -469,12 +469,14 @@ function App() {
           <HostGame
             session={currentSession}
             quiz={currentQuiz}
+            onQuit={clearActiveSession}
           />
         ) : (
           <PlayGame
             session={currentSession}
             quiz={currentQuiz}
             player={currentPlayer}
+            onQuit={clearActiveSession}
           />
         )
       case 'results':

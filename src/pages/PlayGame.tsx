@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { StopWatchIcon, CrownIcon, Tick02Icon, Cancel02Icon } from 'hugeicons-react'
+import { StopWatchIcon, CrownIcon, Tick02Icon, Cancel02Icon, ArrowLeft01Icon } from 'hugeicons-react'
 import { GameSession, Quiz, Player, Question, Answer } from '@/types'
 import { useSupabase } from '@/hooks/useSupabase'
 import type { Player as DbPlayer } from '@/lib/supabase'
+import { Button } from '@/components/ui/button'
 
 interface PlayGameProps {
   session: GameSession | null
   quiz: Quiz | null
   player: Player | null
+  onQuit: () => void
 }
 
 const getAnswerColorClass = (_: Answer['color'], selected: boolean, showCorrect: boolean, isCorrect: boolean) => {
@@ -37,7 +39,7 @@ const getAnswerShape = (color: Answer['color']) => {
   }
 }
 
-export function PlayGame({ session, quiz, player }: PlayGameProps) {
+export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [score, setScore] = useState(() => player?.score ?? 0)
   const [answerResult, setAnswerResult] = useState<{ isCorrect: boolean; pointsEarned: number; correctAnswerId: string | null } | null>(null)
@@ -176,6 +178,16 @@ export function PlayGame({ session, quiz, player }: PlayGameProps) {
 
   return (
     <div className="min-h-screen bg-[#1a1a2e] text-white p-4">
+      <div className="flex justify-end mb-4">
+        <Button
+          variant="ghost"
+          onClick={onQuit}
+          className="text-white/80 hover:text-white hover:bg-white/10"
+        >
+          <ArrowLeft01Icon className="w-4 h-4 mr-2" />
+          Quitter la partie
+        </Button>
+      </div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
