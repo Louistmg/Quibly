@@ -17,9 +17,9 @@ const getRankIcon = (rank: number) => {
     case 1:
       return <CrownIcon className="w-7 h-7 text-[hsl(var(--answer-yellow))]" />
     case 2:
-      return <Medal01Icon className="w-7 h-7 text-gray-400" />
+      return <Medal01Icon className="w-7 h-7 text-muted-foreground" />
     case 3:
-      return <Medal01Icon className="w-7 h-7 text-amber-700" />
+      return <Medal01Icon className="w-7 h-7 text-muted-foreground" />
     default:
       return <span className="text-lg font-medium text-muted-foreground">#{rank}</span>
   }
@@ -30,11 +30,37 @@ const getRankStyle = (rank: number) => {
     case 1:
       return 'bg-[hsl(var(--answer-yellow))]/10 border-[hsl(var(--answer-yellow))]'
     case 2:
-      return 'bg-gray-100 border-gray-300'
+      return 'bg-secondary/70 border-border'
     case 3:
-      return 'bg-amber-50 border-amber-200'
+      return 'bg-muted/70 border-border'
     default:
-      return 'bg-muted/50 border-border'
+      return 'bg-background border-border'
+  }
+}
+
+const getRankBadgeStyle = (rank: number) => {
+  switch (rank) {
+    case 1:
+      return 'bg-[hsl(var(--answer-yellow))] text-white'
+    case 2:
+      return 'bg-foreground text-background'
+    case 3:
+      return 'bg-muted text-foreground'
+    default:
+      return 'bg-secondary text-foreground'
+  }
+}
+
+const getPodiumBadgeStyle = (rank: number) => {
+  switch (rank) {
+    case 1:
+      return 'bg-[hsl(var(--answer-yellow))] text-white'
+    case 2:
+      return 'bg-foreground text-background'
+    case 3:
+      return 'bg-muted text-foreground'
+    default:
+      return 'bg-secondary text-foreground'
   }
 }
 
@@ -91,23 +117,35 @@ export function Results({ session, onBack }: ResultsProps) {
   }, [players])
 
   const winner = rankedPlayers[0]
+  const podiumItems = useMemo(() => {
+    const first = rankedPlayers[0]
+    const second = rankedPlayers[1]
+    const third = rankedPlayers[2]
+
+    return [
+      { rank: 2, player: second, height: 'h-28 sm:h-32', lift: 'translate-y-2 sm:translate-y-1' },
+      { rank: 1, player: first, height: 'h-36 sm:h-40', lift: '-translate-y-2 sm:-translate-y-3' },
+      { rank: 3, player: third, height: 'h-24 sm:h-28', lift: 'translate-y-4 sm:translate-y-3' },
+    ]
+  }, [rankedPlayers])
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="container mx-auto max-w-2xl">
-        <Button variant="ghost" onClick={onBack} className="mb-8 hover:bg-muted">
-          <ArrowLeft01Icon className="w-5 h-5 mr-2" />
-          Retour à l'accueil
-        </Button>
+    <div className="min-h-screen bg-background px-6 py-10">
+      <div className="container mx-auto max-w-3xl space-y-10">
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" onClick={onBack} className="hover:bg-muted">
+            <ArrowLeft01Icon className="w-5 h-5 mr-2" />
+            Retour à l'accueil
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            {rankedPlayers.length} joueur{rankedPlayers.length > 1 ? 's' : ''}
+          </span>
+        </div>
 
-        {/* Winner Banner */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-3 mb-4">
-            <div className="w-16 h-16 rounded-xl bg-[hsl(var(--answer-yellow))] flex items-center justify-center">
-              <CrownIcon className="w-8 h-8 text-white" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-medium text-foreground mb-2">Partie terminée</h1>
+        <div className="text-center space-y-3">
+          <h1 className="text-4xl md:text-5xl font-medium text-foreground">
+            Classement final
+          </h1>
           <p className="text-lg text-muted-foreground">
             {winner ? (
               <>
@@ -119,15 +157,39 @@ export function Results({ session, onBack }: ResultsProps) {
           </p>
         </div>
 
-        {/* Podium */}
-        <Card className="mb-8 border border-border shadow-sm overflow-hidden">
-          <CardHeader className="text-center bg-muted/50 border-b border-border">
-              <CardTitle className="text-xl font-medium flex items-center justify-center gap-2">
-                <CrownIcon className="w-5 h-5" />
-                Classement final
-              </CardTitle>
+        {rankedPlayers.length > 0 && (
+          <div className="grid grid-cols-3 items-end gap-4">
+            {podiumItems.map((item) => (
+              <div key={item.rank} className={`flex flex-col items-center gap-3 ${item.lift}`}>
+                <div className={`rounded-full px-3 py-1 text-xs font-medium ${getPodiumBadgeStyle(item.rank)}`}>
+                  {item.rank === 1 ? '1er' : item.rank === 2 ? '2e' : '3e'}
+                </div>
+                <div className={`w-full rounded-2xl border shadow-lg ${getRankStyle(item.rank)} ${item.height}`}>
+                  <div className="flex h-full flex-col items-center justify-end pb-4">
+                    <div className={`w-11 h-11 rounded-full flex items-center justify-center font-medium ${getRankBadgeStyle(item.rank)}`}>
+                      {(item.player?.name?.[0] ?? '?').toUpperCase()}
+                    </div>
+                    <p className="mt-2 text-sm font-medium text-foreground">
+                      {item.player?.name ?? '—'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.player ? `${item.player.score} pts` : ' '}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <Card className="border border-border shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-medium flex items-center gap-2">
+              <CrownIcon className="w-5 h-5" />
+              Classement final
+            </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="space-y-3">
             {isLoading ? (
               <div className="p-6 text-sm text-muted-foreground">Chargement des résultats...</div>
             ) : rankedPlayers.length === 0 ? (
@@ -136,28 +198,24 @@ export function Results({ session, onBack }: ResultsProps) {
               rankedPlayers.map((player) => (
                 <div
                   key={player.id}
-                  className={`
-                    flex flex-wrap items-center gap-3 sm:gap-4 p-4 border-b last:border-b-0
-                    ${getRankStyle(player.rank)}
-                    ${player.rank <= 3 ? 'border-l-4' : 'border-l-4 border-l-transparent'}
-                  `}
+                  className={`flex items-center justify-between p-4 rounded-xl border ${getRankStyle(player.rank)}`}
                 >
-                  <div className="w-10 flex justify-center">
-                    {getRankIcon(player.rank)}
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 flex justify-center">
+                      {getRankIcon(player.rank)}
+                    </div>
+                    <div className={`w-11 h-11 rounded-full flex items-center justify-center font-medium ${getRankBadgeStyle(player.rank)}`}>
+                      {(player.name?.[0] ?? '?').toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">{player.name}</p>
+                      {player.rank === 1 && (
+                        <p className="text-sm text-[hsl(var(--answer-yellow))]">Gagnant</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center font-medium">
-                    {(player.name?.[0] ?? '?').toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`font-medium text-lg break-words ${player.rank === 1 ? 'text-[hsl(var(--answer-yellow))]' : 'text-foreground'}`}>
-                      {player.name}
-                    </p>
-                    {player.rank === 1 && (
-                      <p className="text-sm text-[hsl(var(--answer-yellow))]">Gagnant</p>
-                    )}
-                  </div>
-                  <div className="text-left sm:text-right w-full sm:w-auto sm:ml-auto">
-                    <p className="text-2xl font-medium">{player.score}</p>
+                  <div className="text-right">
+                    <p className="text-2xl font-medium text-foreground">{player.score}</p>
                     <p className="text-sm text-muted-foreground">points</p>
                   </div>
                 </div>
@@ -166,7 +224,6 @@ export function Results({ session, onBack }: ResultsProps) {
           </CardContent>
         </Card>
 
-        {/* Actions */}
         <CustomButton
           variant="primary"
           onClick={onBack}
