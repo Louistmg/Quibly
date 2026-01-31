@@ -188,9 +188,9 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
                 </label>
                 <Input
                   type="number"
-                  min={10}
+                  min={500}
                   max={1000}
-                  step={10}
+                  step={1}
                   value={points}
                   onChange={(e) => setPoints(Number(e.target.value))}
                   className="border-border focus-visible:ring-foreground"
