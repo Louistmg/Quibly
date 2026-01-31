@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { StopWatchIcon, CrownIcon, Tick02Icon, Cancel02Icon, ArrowLeft01Icon } from 'hugeicons-react'
 import { GameSession, Quiz, Player, Question, Answer } from '@/types'
 import { useSupabase } from '@/hooks/useSupabase'
-import type { Player as DbPlayer } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 
 interface PlayGameProps {
@@ -45,52 +44,16 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
   const [answerResult, setAnswerResult] = useState<{ isCorrect: boolean; pointsEarned: number; correctAnswerId: string | null } | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
-  const { submitAnswer, getPlayers, subscribeToSession } = useSupabase()
+  const { submitAnswer, getAnswerStats, advanceSessionPhase } = useSupabase()
 
   const currentQuestionIndex = session?.currentQuestionIndex ?? 0
   const currentQuestion: Question | undefined = quiz?.questions[currentQuestionIndex]
   const phase = session?.phase ?? 'question'
-  const showResult = phase === 'results'
+  const showResult = phase === 'results' || phase === 'scoreboard'
   
   const [timeRemaining, setTimeRemaining] = useState(() => currentQuestion?.timeLimit ?? 0)
   const hasSubmittedRef = useRef(false)
-  const [players, setPlayers] = useState<Player[]>([])
-
-  const mapDbPlayers = useCallback((dbPlayers: DbPlayer[]): Player[] => {
-    return dbPlayers
-      .filter((p) => !p.is_host)
-      .map((p) => ({
-        id: p.id,
-        name: p.name,
-        score: p.score,
-        answers: [],
-        isHost: p.is_host,
-        userId: p.user_id ?? '',
-      }))
-  }, [])
-
-  const loadPlayers = useCallback(async () => {
-    if (!session?.id) return
-    try {
-      const data = await getPlayers(session.id)
-      setPlayers(mapDbPlayers(data))
-    } catch (err) {
-      console.error('Erreur lors du chargement des joueurs :', err)
-    }
-  }, [getPlayers, mapDbPlayers, session?.id])
-
-  useEffect(() => {
-    if (phase !== 'scoreboard') return
-    void loadPlayers()
-  }, [loadPlayers, phase])
-
-  useEffect(() => {
-    if (!session?.id || phase !== 'scoreboard') return
-    const unsubscribe = subscribeToSession(session.id, () => {
-      void loadPlayers()
-    })
-    return unsubscribe
-  }, [loadPlayers, phase, session?.id, subscribeToSession])
+  const [serverCorrectAnswerId, setServerCorrectAnswerId] = useState<string | null>(null)
 
   const handleAnswer = useCallback(async (answerId: string | null) => {
     if (!currentQuestion || !player || isSubmitting || hasSubmittedRef.current || phase !== 'question') return
@@ -118,10 +81,15 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
       setAnswerResult(null)
       setSubmissionError('Impossible de valider la réponse pour le moment.')
     } finally {
+      if (session?.id) {
+        advanceSessionPhase(session.id).catch((advanceError) => {
+          console.error('Error advancing session phase:', advanceError)
+        })
+      }
       setIsSubmitting(false)
     }
 
-  }, [currentQuestion, timeRemaining, player, submitAnswer, isSubmitting, phase])
+  }, [advanceSessionPhase, currentQuestion, isSubmitting, phase, player, session?.id, submitAnswer, timeRemaining])
 
   useEffect(() => {
     if (!player) return
@@ -135,6 +103,7 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
     setAnswerResult(null)
     setSubmissionError(null)
     setTimeRemaining(currentQuestion.timeLimit)
+    setServerCorrectAnswerId(null)
   }, [currentQuestion, phase])
 
   useEffect(() => {
@@ -161,9 +130,28 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
     }
   }, [currentQuestion, phase, handleAnswer, session?.questionStartedAt, timeRemaining])
 
-  const rankedPlayers = useMemo(() => {
-    return [...players].sort((a, b) => b.score - a.score)
-  }, [players])
+  useEffect(() => {
+    if (!session?.id || !currentQuestion) return
+    if (!showResult) return
+    if (answerResult?.correctAnswerId || serverCorrectAnswerId) return
+    void (async () => {
+      try {
+        const stats = await getAnswerStats(session.id, currentQuestion.id)
+        setServerCorrectAnswerId(stats.correct_answer_id ?? null)
+      } catch (err) {
+        console.error('Erreur chargement bonne réponse :', err)
+      }
+    })()
+  }, [answerResult?.correctAnswerId, currentQuestion, getAnswerStats, serverCorrectAnswerId, session?.id, showResult])
+
+  useEffect(() => {
+    if (!session?.id) return
+    if (phase !== 'question' && phase !== 'results') return
+    const interval = setInterval(() => {
+      void advanceSessionPhase(session.id).catch(() => {})
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [advanceSessionPhase, phase, session?.id])
 
   if (!currentQuestion) return null
 
@@ -171,8 +159,9 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
     ? currentQuestion.answers.find((answer) => answer.id === selectedAnswer)?.text ?? null
     : null
 
-  const correctAnswerText = answerResult?.correctAnswerId
-    ? currentQuestion.answers.find((answer) => answer.id === answerResult.correctAnswerId)?.text ?? null
+  const resolvedCorrectAnswerId = answerResult?.correctAnswerId ?? serverCorrectAnswerId
+  const correctAnswerText = resolvedCorrectAnswerId
+    ? currentQuestion.answers.find((answer) => answer.id === resolvedCorrectAnswerId)?.text ?? null
     : null
   const canAnswer = phase === 'question'
 
@@ -238,8 +227,8 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
       <div className="grid grid-cols-2 gap-4 max-w-4xl mx-auto">
         {currentQuestion.answers.map((answer) => {
           const isSelected = selectedAnswer === answer.id
-          const isCorrect = answerResult?.correctAnswerId === answer.id
-          const canShowCorrect = showResult && answerResult !== null
+          const isCorrect = resolvedCorrectAnswerId === answer.id
+          const canShowCorrect = showResult && resolvedCorrectAnswerId !== null
           
           return (
             <button
@@ -315,40 +304,6 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
         </div>
       )}
 
-      {phase === 'scoreboard' && (
-        <div className="text-center mt-8">
-          <div className="inline-flex items-center gap-2 bg-white/10 px-6 py-3 rounded-full text-white/80 text-lg mb-6">
-            <CrownIcon className="w-5 h-5 text-[hsl(var(--answer-yellow))]" />
-            Classement provisoire
-          </div>
-          {rankedPlayers.length === 0 ? (
-            <p className="text-white/70 text-lg">Aucun joueur pour le moment.</p>
-          ) : (
-            <div className="max-w-xl mx-auto space-y-3">
-              {rankedPlayers.map((rankedPlayer, index) => (
-                <div
-                  key={rankedPlayer.id}
-                  className="flex items-center justify-between p-4 bg-white/10 rounded-xl border border-white/10 transition-all duration-500"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center font-medium">
-                      {(rankedPlayer.name?.[0] ?? '?').toUpperCase()}
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium text-white">{rankedPlayer.name}</p>
-                      <p className="text-sm text-white/60">#{index + 1}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-medium text-white">{rankedPlayer.score}</p>
-                    <p className="text-sm text-white/60">pts</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

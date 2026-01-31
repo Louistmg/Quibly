@@ -17,6 +17,14 @@ type AnswerStats = {
   answers: { id: string; text: string; color: 'red' | 'blue' | 'yellow' | 'green'; count: number }[]
 }
 
+type AdvanceSessionPhaseResult = {
+  status: 'updated' | 'noop'
+  phase: 'question' | 'results' | 'scoreboard'
+  total_players?: number
+  total_answers?: number
+  reason?: string
+}
+
 const QUIZ_CODE_LENGTH = 6
 const QUIZ_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
@@ -348,6 +356,16 @@ export function useSupabase() {
     return data as AnswerStats
   }, [ensureAuth])
 
+  const advanceSessionPhase = useCallback(async (sessionId: string) => {
+    await ensureAuth()
+    const { data, error } = await supabase.rpc('advance_session_phase', {
+      session_id_input: sessionId
+    })
+
+    if (error) throw error
+    return data as AdvanceSessionPhaseResult
+  }, [ensureAuth])
+
   const subscribeToSession = useCallback((sessionId: string, callback: (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => void) => {
     let subscription: ReturnType<typeof supabase.channel> | null = null
     let isClosed = false
@@ -429,6 +447,7 @@ export function useSupabase() {
     submitAnswer,
     getWaitingSessionByCode,
     getAnswerStats,
+    advanceSessionPhase,
     getSessionById,
     getPlayerById,
     getPlayerBySession,

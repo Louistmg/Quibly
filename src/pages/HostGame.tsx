@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { StopWatchIcon, ArrowRight01Icon, Tick02Icon, ArrowLeft01Icon } from 'hugeicons-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -55,8 +55,7 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
   const [answerStats, setAnswerStats] = useState<AnswerStats | null>(null)
   const [timeRemaining, setTimeRemaining] = useState(() => currentQuestion?.timeLimit ?? 0)
   const [isLoadingStats, setIsLoadingStats] = useState(false)
-  const autoAdvanceRef = useRef(false)
-  const { getPlayers, subscribeToSession, getAnswerStats, updateSessionState } = useSupabase()
+  const { getPlayers, subscribeToSession, getAnswerStats, updateSessionState, advanceSessionPhase } = useSupabase()
 
   const mapDbPlayers = useCallback((dbPlayers: DbPlayer[]): UiPlayer[] => {
     return dbPlayers.map((p) => ({
@@ -126,37 +125,13 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
   }, [currentQuestion, phase, session?.questionStartedAt, session?.updatedAt])
 
   useEffect(() => {
-    if (!session?.id || phase !== 'question' || !currentQuestion) return
-    if (!session?.questionStartedAt) return
-    if (timeRemaining === 0) {
-      void updateSessionState(session.id, { phase: 'results' })
-    }
-  }, [currentQuestion, phase, session?.id, session?.questionStartedAt, timeRemaining, updateSessionState])
-
-  useEffect(() => {
-    if (!session?.id || phase !== 'question' || !answerStats) return
-    if (answerStats.total_players > 0 && answerStats.total_answers >= answerStats.total_players) {
-      void updateSessionState(session.id, { phase: 'results' })
-    }
-  }, [answerStats, phase, session?.id, updateSessionState])
-
-  useEffect(() => {
-    if (phase !== 'results') {
-      autoAdvanceRef.current = false
-      return
-    }
-    if (!session?.id || !answerStats) return
-    if (autoAdvanceRef.current) return
-    if (answerStats.total_players <= 0) return
-    if (answerStats.total_answers < answerStats.total_players) return
-
-    autoAdvanceRef.current = true
-    const timeout = setTimeout(() => {
-      void updateSessionState(session.id, { phase: 'scoreboard' })
-    }, 2500)
-
-    return () => clearTimeout(timeout)
-  }, [answerStats, phase, session?.id, updateSessionState])
+    if (!session?.id) return
+    if (phase !== 'question' && phase !== 'results') return
+    const interval = setInterval(() => {
+      void advanceSessionPhase(session.id).catch(() => {})
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [advanceSessionPhase, phase, session?.id])
 
   const totalPlayers = useMemo(() => {
     return players.filter((p) => !p.isHost).length
@@ -180,16 +155,6 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
   const totalAnswers = answerStats?.total_answers ?? 0
   const totalPlayersForStats = answerStats?.total_players ?? totalPlayers
   const correctAnswerId = answerStats?.correct_answer_id ?? null
-
-  const handleShowResults = async () => {
-    if (!session?.id) return
-    await updateSessionState(session.id, { phase: 'results' })
-  }
-
-  const handleShowScoreboard = async () => {
-    if (!session?.id) return
-    await updateSessionState(session.id, { phase: 'scoreboard' })
-  }
 
   const handleNextQuestion = async () => {
     if (!session?.id || !quiz) return
@@ -264,14 +229,8 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
                   style={{ width: totalPlayersForStats > 0 ? `${Math.min(100, Math.round((totalAnswers / totalPlayersForStats) * 100))}%` : '0%' }}
                 />
               </div>
-              <div className="flex justify-end">
-                <CustomButton
-                  variant="secondary"
-                  onClick={handleShowResults}
-                  icon={<ArrowRight01Icon className="w-5 h-5" />}
-                >
-                  Afficher les résultats
-                </CustomButton>
+              <div className="flex justify-end text-sm text-muted-foreground">
+                Transition automatique en cours
               </div>
             </CardContent>
           </Card>
@@ -314,14 +273,8 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
                 </div>
               )}
 
-              <div className="flex justify-end">
-                <CustomButton
-                  variant="primary"
-                  onClick={handleShowScoreboard}
-                  icon={<ArrowRight01Icon className="w-5 h-5" />}
-                >
-                  Afficher le classement
-                </CustomButton>
+              <div className="flex justify-end text-sm text-muted-foreground">
+                Transition automatique en cours
               </div>
             </CardContent>
           </Card>
