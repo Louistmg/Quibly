@@ -122,7 +122,7 @@ function App() {
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   const [isHost, setIsHost] = useState(false)
   
-  const { createQuiz, createGameSession, joinGame, updateSessionState, getQuizByCode, getWaitingSessionByCode, getSessionById, getPlayerById, getPlayerBySession, subscribeToGameSession, ensureAuth, loading, error } = useSupabase()
+  const { createQuiz, createGameSession, joinGame, updateSessionState, getQuizByCode, getWaitingSessionByCode, getSessionById, getPlayerById, getPlayerBySession, removePlayer, subscribeToGameSession, ensureAuth, loading, error } = useSupabase()
 
   const clearActiveSession = useCallback(() => {
     clearStoredSession()
@@ -132,6 +132,17 @@ function App() {
     setIsHost(false)
     setPhase('home')
   }, [])
+
+  const handleQuit = useCallback(async () => {
+    if (currentPlayer?.id) {
+      try {
+        await removePlayer(currentPlayer.id)
+      } catch (err) {
+        console.error('Erreur lors de la suppression du joueur :', err)
+      }
+    }
+    clearActiveSession()
+  }, [clearActiveSession, currentPlayer?.id, removePlayer])
 
   useEffect(() => {
     ensureAuth().catch((err: unknown) => {
@@ -460,7 +471,7 @@ function App() {
             session={currentSession}
             quiz={currentQuiz}
             onStart={handleStartGame}
-            onBack={clearActiveSession}
+            onBack={handleQuit}
             isHost={isHost}
           />
         )
@@ -469,21 +480,21 @@ function App() {
           <HostGame
             session={currentSession}
             quiz={currentQuiz}
-            onQuit={clearActiveSession}
+            onQuit={handleQuit}
           />
         ) : (
           <PlayGame
             session={currentSession}
             quiz={currentQuiz}
             player={currentPlayer}
-            onQuit={clearActiveSession}
+            onQuit={handleQuit}
           />
         )
       case 'results':
         return (
           <Results
             session={currentSession}
-            onBack={clearActiveSession}
+            onBack={handleQuit}
           />
         )
       default:
