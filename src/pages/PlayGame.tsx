@@ -164,6 +164,11 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
     ? currentQuestion.answers.find((answer) => answer.id === resolvedCorrectAnswerId)?.text ?? null
     : null
   const canAnswer = phase === 'question'
+  const hasSelectedAnswer = Boolean(selectedAnswer)
+  const isAnswerCorrect = resolvedCorrectAnswerId
+    ? selectedAnswer === resolvedCorrectAnswerId
+    : (answerResult?.isCorrect ?? false)
+  const pointsEarned = answerResult?.pointsEarned ?? 0
 
   return (
     <div className="min-h-screen bg-[#1a1a2e] text-white p-4">
@@ -270,20 +275,20 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
               <Cancel02Icon className="w-6 h-6" />
               {submissionError}
             </div>
-          ) : answerResult?.isCorrect ? (
-            <div className="inline-flex items-center gap-2 bg-[hsl(var(--answer-green))] text-white px-6 py-3 rounded-full font-medium text-xl">
-              <Tick02Icon className="w-6 h-6" />
-              Bonne réponse ! +{answerResult.pointsEarned} pts
-            </div>
-          ) : selectedAnswer ? (
-            <div className="inline-flex items-center gap-2 bg-[hsl(var(--answer-red))] text-white px-6 py-3 rounded-full font-medium text-xl">
-              <Cancel02Icon className="w-6 h-6" />
-              Mauvaise réponse
-            </div>
-          ) : (
+          ) : !hasSelectedAnswer ? (
             <div className="inline-flex items-center gap-2 bg-white/20 text-white px-6 py-3 rounded-full font-medium text-xl">
               <StopWatchIcon className="w-6 h-6" />
               Temps écoulé
+            </div>
+          ) : isAnswerCorrect ? (
+            <div className="inline-flex items-center gap-2 bg-[hsl(var(--answer-green))] text-white px-6 py-3 rounded-full font-medium text-xl">
+              <Tick02Icon className="w-6 h-6" />
+              Bonne réponse ! +{pointsEarned} pts
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-2 bg-[hsl(var(--answer-red))] text-white px-6 py-3 rounded-full font-medium text-xl">
+              <Cancel02Icon className="w-6 h-6" />
+              Mauvaise réponse
             </div>
           )}
 
