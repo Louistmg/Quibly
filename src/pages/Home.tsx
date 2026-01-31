@@ -45,7 +45,7 @@ export function Home({ onCreate, onJoin }: HomeProps) {
             <CustomButton
               variant="primary"
               onClick={onCreate}
-              icon={<PlayIcon className="w-4 h-4" />}
+              icon={<ArrowRight01Icon className="w-4 h-4" />}
             >
               Créer un quiz
             </CustomButton>
