@@ -137,7 +137,7 @@ export function Results({ session, onBack }: ResultsProps) {
                 <div
                   key={player.id}
                   className={`
-                    flex items-center gap-4 p-4 border-b last:border-b-0
+                    flex flex-wrap items-center gap-3 sm:gap-4 p-4 border-b last:border-b-0
                     ${getRankStyle(player.rank)}
                     ${player.rank <= 3 ? 'border-l-4' : 'border-l-4 border-l-transparent'}
                   `}
@@ -148,15 +148,15 @@ export function Results({ session, onBack }: ResultsProps) {
                   <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center font-medium">
                     {(player.name?.[0] ?? '?').toUpperCase()}
                   </div>
-                  <div className="flex-1">
-                    <p className={`font-medium text-lg ${player.rank === 1 ? 'text-[hsl(var(--answer-yellow))]' : 'text-foreground'}`}>
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-medium text-lg break-words ${player.rank === 1 ? 'text-[hsl(var(--answer-yellow))]' : 'text-foreground'}`}>
                       {player.name}
                     </p>
                     {player.rank === 1 && (
                       <p className="text-sm text-[hsl(var(--answer-yellow))]">Gagnant</p>
                     )}
                   </div>
-                  <div className="text-right">
+                  <div className="text-left sm:text-right w-full sm:w-auto sm:ml-auto">
                     <p className="text-2xl font-medium">{player.score}</p>
                     <p className="text-sm text-muted-foreground">points</p>
                   </div>

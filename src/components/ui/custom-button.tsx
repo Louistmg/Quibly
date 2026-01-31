@@ -21,7 +21,7 @@ export function Button({
   disabled,
   type
 }: ButtonProps) {
-  const baseStyles = "h-12 min-w-[200px] text-sm font-medium rounded-lg inline-flex items-center justify-center"
+  const baseStyles = "h-12 px-8 text-sm font-medium rounded-lg inline-flex items-center justify-center"
 
   const variants = {
     primary: "bg-foreground text-background hover:bg-foreground/90",

@@ -33,26 +33,28 @@ export function Home({ onCreate, onJoin }: HomeProps) {
         </div>
       </nav>
 
-      <section className="h-[calc(100dvh-4rem)] min-h-[500px] flex flex-col justify-center items-center px-6">
-        <div className="max-w-2xl mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-medium tracking-tight text-foreground mb-4 leading-tight">
+      <section className="min-h-[calc(100dvh-4rem)] flex flex-col justify-center px-6 py-16 md:py-0 md:items-center">
+        <div className="max-w-2xl md:mx-auto text-left md:text-center">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-medium tracking-tight text-foreground mb-4 leading-tight">
             Créez des quiz captivants et jouez avec vos amis
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto leading-snug mb-8">
+          <p className="text-lg md:text-xl text-muted-foreground md:max-w-xl md:mx-auto leading-snug mb-8">
             Quibly vous permet de créer facilement des quiz personnalisés et de défier vos amis, votre famille ou vos collègues en temps réel. Une expérience de jeu simple, rapide et divertissante.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:justify-center w-full sm:w-auto">
             <CustomButton
               variant="primary"
               onClick={onCreate}
-              icon={<ArrowRight01Icon className="w-4 h-4" />}
+              icon={<PlayIcon className="w-4 h-4" />}
+              className="w-full sm:w-auto"
             >
               Créer un quiz
             </CustomButton>
             <CustomButton
               variant="secondary"
               onClick={onJoin}
-              icon={<UserGroupIcon className="w-4 h-4" />}
+              icon={<ArrowRight01Icon className="w-4 h-4" />}
+              className="w-full sm:w-auto"
             >
               Rejoindre une partie
             </CustomButton>
@@ -60,14 +62,34 @@ export function Home({ onCreate, onJoin }: HomeProps) {
         </div>
       </section>
 
+      <section className="border-y border-border bg-secondary/30 mb-20">
+        <div className="container mx-auto px-6 py-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto text-center">
+            <div>
+              <p className="text-3xl md:text-4xl font-medium text-foreground">13K+</p>
+              <p className="text-sm text-muted-foreground mt-1">Joueurs uniques</p>
+            </div>
+            <div>
+              <p className="text-3xl md:text-4xl font-medium text-foreground">4K+</p>
+              <p className="text-sm text-muted-foreground mt-1">Quiz créés</p>
+            </div>
+            <div>
+              <p className="text-3xl md:text-4xl font-medium text-foreground">50K+</p>
+              <p className="text-sm text-muted-foreground mt-1">Parties jouées</p>
+            </div>
+            <div>
+              <p className="text-3xl md:text-4xl font-medium text-foreground">99%</p>
+              <p className="text-sm text-muted-foreground mt-1">Satisfaction</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="fonctionnalites" className="container mx-auto px-6 py-36">
         <div className="text-center mb-12">
           <h2 className="text-2xl md:text-3xl font-medium mb-3">Fonctionnalités</h2>
-          <p className="text-muted-foreground">
-            Tout ce qu'il faut pour des quiz réussis
-          </p>
         </div>
-        
+
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
           <Card className="border-border">
             <CardContent className="p-5">
@@ -104,7 +126,7 @@ export function Home({ onCreate, onJoin }: HomeProps) {
               <div className="w-8 h-8 rounded-lg bg-foreground/10 flex items-center justify-center mb-3">
                 <CrownIcon className="w-4 h-4" />
               </div>
-              <h3 className="text-base font-medium mb-1">Classement auto</h3>
+              <h3 className="text-base font-medium mb-1">Classement automatique</h3>
               <p className="text-sm text-muted-foreground">Points calculés automatiquement selon la rapidité des réponses</p>
             </CardContent>
           </Card>
@@ -114,9 +136,6 @@ export function Home({ onCreate, onJoin }: HomeProps) {
       <section id="opensource" className="container mx-auto px-6 py-32">
         <div className="text-center mb-10">
           <h2 className="text-2xl md:text-3xl font-medium mb-3">Open source</h2>
-          <p className="text-muted-foreground">
-            Quibly est développé par une communauté de passionnés. Le code source est public et chacun peut contribuer à son évolution.
-          </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-4 max-w-5xl mx-auto">
@@ -155,9 +174,6 @@ export function Home({ onCreate, onJoin }: HomeProps) {
       <section id="comment-ca-marche" className="container mx-auto px-6 py-32">
         <div className="text-center mb-10">
           <h2 className="text-2xl md:text-3xl font-medium mb-3">Comment ça marche ?</h2>
-          <p className="text-muted-foreground">
-            Trois étapes simples
-          </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-4 max-w-5xl mx-auto">
@@ -194,16 +210,17 @@ export function Home({ onCreate, onJoin }: HomeProps) {
       </section>
 
       <section className="container mx-auto px-6 pt-32 pb-56">
-        <div className="max-w-2xl mx-auto text-center">
+        <div className="max-w-2xl md:mx-auto text-left md:text-center">
           <h2 className="text-2xl md:text-3xl font-medium mb-3">Prêt à jouer ?</h2>
           <p className="text-muted-foreground mb-6">
             Rejoignez des milliers d'utilisateurs qui animent leurs événements avec Quibly. Créez votre premier quiz gratuitement en quelques clics et défiez vos amis.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:justify-center w-full sm:w-auto">
             <CustomButton
               variant="primary"
               onClick={onCreate}
               icon={<PlayIcon className="w-4 h-4" />}
+              className="w-full sm:w-auto"
             >
               Créer un quiz
             </CustomButton>
@@ -211,6 +228,7 @@ export function Home({ onCreate, onJoin }: HomeProps) {
               variant="secondary"
               onClick={onJoin}
               icon={<ArrowRight01Icon className="w-4 h-4" />}
+              className="w-full sm:w-auto"
             >
               Rejoindre une partie
             </CustomButton>

@@ -100,16 +100,16 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
               ) : players.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Aucun joueur pour le moment.</p>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {players.map((p) => (
                     <div
                       key={p.id}
-                      className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border"
+                      className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border min-w-0"
                     >
                       <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center font-medium">
                         {(p.name?.[0] ?? '?').toUpperCase()}
                       </div>
-                      <span className="font-medium text-foreground">{p.name}</span>
+                      <span className="font-medium text-foreground break-words">{p.name}</span>
                     </div>
                   ))}
                 </div>

@@ -85,6 +85,17 @@
     @apply bg-background text-foreground;
     font-family: "Cabinet Grotesk", system-ui, sans-serif;
   }
+
+  /* Custom text selection */
+  ::selection {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  ::-moz-selection {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
 }
 
 @layer utilities {
