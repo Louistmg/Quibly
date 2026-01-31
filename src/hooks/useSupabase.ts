@@ -433,6 +433,15 @@ export function useSupabase() {
     }
   }, [ensureAuth])
 
+  const deleteGameSession = useCallback(async (sessionId: string) => {
+    await ensureAuth()
+    const { error } = await supabase.rpc('delete_game_session', {
+      session_id_input: sessionId
+    })
+
+    if (error) throw error
+  }, [ensureAuth])
+
   return {
     loading,
     error,
@@ -453,6 +462,7 @@ export function useSupabase() {
     getPlayerById,
     getPlayerBySession,
     removePlayer,
+    deleteGameSession,
     subscribeToSession,
     subscribeToGameSession
   }
