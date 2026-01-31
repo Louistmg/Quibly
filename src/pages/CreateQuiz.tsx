@@ -28,7 +28,7 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentQuestion, setCurrentQuestion] = useState('')
   const [currentAnswers, setCurrentAnswers] = useState<Answer[]>([
-    { id: uuidv4(), text: '', isCorrect: true, color: 'red' },
+    { id: uuidv4(), text: '', isCorrect: false, color: 'red' },
     { id: uuidv4(), text: '', isCorrect: false, color: 'blue' },
     { id: uuidv4(), text: '', isCorrect: false, color: 'yellow' },
     { id: uuidv4(), text: '', isCorrect: false, color: 'green' },
@@ -38,6 +38,7 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
 
   const handleAddQuestion = () => {
     if (!currentQuestion.trim() || currentAnswers.some(a => !a.text.trim())) return
+    if (!currentAnswers.some(a => a.isCorrect)) return
 
     const newQuestion: Question = {
       id: uuidv4(),
@@ -50,7 +51,7 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
     setQuestions([...questions, newQuestion])
     setCurrentQuestion('')
     setCurrentAnswers([
-      { id: uuidv4(), text: '', isCorrect: true, color: 'red' },
+      { id: uuidv4(), text: '', isCorrect: false, color: 'red' },
       { id: uuidv4(), text: '', isCorrect: false, color: 'blue' },
       { id: uuidv4(), text: '', isCorrect: false, color: 'yellow' },
       { id: uuidv4(), text: '', isCorrect: false, color: 'green' },
@@ -77,6 +78,8 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
     if (!title.trim() || questions.length === 0) return
     onSubmit({ title, description, questions })
   }
+
+  const hasCorrectAnswer = currentAnswers.some(a => a.isCorrect)
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -199,11 +202,16 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
               variant="secondary"
               onClick={handleAddQuestion}
               className="w-full"
-              disabled={!currentQuestion.trim() || currentAnswers.some(a => !a.text.trim())}
+              disabled={!currentQuestion.trim() || currentAnswers.some(a => !a.text.trim()) || !hasCorrectAnswer}
               icon={<PlusSignIcon className="w-5 h-5" />}
             >
               Ajouter la question
             </CustomButton>
+            {!hasCorrectAnswer && (
+              <p className="text-sm text-muted-foreground text-center">
+                Sélectionnez la bonne réponse pour continuer.
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -220,6 +228,9 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
                 >
                   <div>
                     <p className="font-medium text-foreground">{index + 1}. {q.text}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Bonne réponse : {q.answers.find(a => a.isCorrect)?.text || 'Non définie'}
+                    </p>
                     <p className="text-sm text-muted-foreground mt-1">
                       {q.answers.length} réponses · {q.timeLimit}s · {q.points} pts
                     </p>
