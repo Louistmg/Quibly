@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StopWatchIcon, ArrowRight01Icon, Tick02Icon } from 'hugeicons-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button as CustomButton } from '@/components/ui/custom-button'
@@ -53,6 +53,7 @@ export function HostGame({ session, quiz }: HostGameProps) {
   const [answerStats, setAnswerStats] = useState<AnswerStats | null>(null)
   const [timeRemaining, setTimeRemaining] = useState(() => currentQuestion?.timeLimit ?? 0)
   const [isLoadingStats, setIsLoadingStats] = useState(false)
+  const autoAdvanceRef = useRef(false)
   const { getPlayers, subscribeToSession, getAnswerStats, updateSessionState } = useSupabase()
 
   const mapDbPlayers = useCallback((dbPlayers: DbPlayer[]): UiPlayer[] => {
@@ -135,6 +136,24 @@ export function HostGame({ session, quiz }: HostGameProps) {
     if (answerStats.total_players > 0 && answerStats.total_answers >= answerStats.total_players) {
       void updateSessionState(session.id, { phase: 'results' })
     }
+  }, [answerStats, phase, session?.id, updateSessionState])
+
+  useEffect(() => {
+    if (phase !== 'results') {
+      autoAdvanceRef.current = false
+      return
+    }
+    if (!session?.id || !answerStats) return
+    if (autoAdvanceRef.current) return
+    if (answerStats.total_players <= 0) return
+    if (answerStats.total_answers < answerStats.total_players) return
+
+    autoAdvanceRef.current = true
+    const timeout = setTimeout(() => {
+      void updateSessionState(session.id, { phase: 'scoreboard' })
+    }, 2500)
+
+    return () => clearTimeout(timeout)
   }, [answerStats, phase, session?.id, updateSessionState])
 
   const totalPlayers = useMemo(() => {
