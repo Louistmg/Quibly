@@ -254,6 +254,17 @@ export function useSupabase() {
     return data as Player | null
   }, [ensureAuth])
 
+  const removePlayer = useCallback(async (playerId: string) => {
+    const authUserId = await ensureAuth()
+    const { error } = await supabase
+      .from('players')
+      .delete()
+      .eq('id', playerId)
+      .eq('user_id', authUserId)
+
+    if (error) throw error
+  }, [ensureAuth])
+
   const updateSessionStatus = useCallback(async (sessionId: string, status: 'waiting' | 'playing' | 'finished') => {
     await ensureAuth()
     const { error } = await supabase
@@ -421,6 +432,7 @@ export function useSupabase() {
     getSessionById,
     getPlayerById,
     getPlayerBySession,
+    removePlayer,
     subscribeToSession,
     subscribeToGameSession
   }
