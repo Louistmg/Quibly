@@ -4,7 +4,7 @@ import { Button as CustomButton } from '@/components/ui/custom-button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Question, Quiz, Answer } from '@/types'
-import { ArrowLeft01Icon, PlusSignIcon, Delete02Icon, Tick02Icon, Cancel01Icon, Clock01Icon, CrownIcon, RocketIcon } from 'hugeicons-react'
+import { ArrowLeft01Icon, PlusSignIcon, Delete02Icon, Tick02Icon, Cancel01Icon, Clock01Icon, CrownIcon, RocketIcon, Edit02Icon } from 'hugeicons-react'
 import { v4 as uuidv4 } from 'uuid'
 
 interface CreateQuizProps {
@@ -35,20 +35,30 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
   ])
   const [timeLimit, setTimeLimit] = useState(20)
   const [points, setPoints] = useState(1000)
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null)
 
   const handleAddQuestion = () => {
     if (!currentQuestion.trim() || currentAnswers.some(a => !a.text.trim())) return
     if (!currentAnswers.some(a => a.isCorrect)) return
 
-    const newQuestion: Question = {
-      id: uuidv4(),
-      text: currentQuestion,
-      answers: currentAnswers,
-      timeLimit,
-      points,
+    if (editingQuestionId) {
+      setQuestions(questions.map((q) => (
+        q.id === editingQuestionId
+          ? { ...q, text: currentQuestion, answers: currentAnswers, timeLimit, points }
+          : q
+      )))
+      setEditingQuestionId(null)
+    } else {
+      const newQuestion: Question = {
+        id: uuidv4(),
+        text: currentQuestion,
+        answers: currentAnswers,
+        timeLimit,
+        points,
+      }
+      setQuestions([...questions, newQuestion])
     }
 
-    setQuestions([...questions, newQuestion])
     setCurrentQuestion('')
     setCurrentAnswers([
       { id: uuidv4(), text: '', isCorrect: false, color: 'red' },
@@ -56,10 +66,24 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
       { id: uuidv4(), text: '', isCorrect: false, color: 'yellow' },
       { id: uuidv4(), text: '', isCorrect: false, color: 'green' },
     ])
+    setTimeLimit(20)
+    setPoints(1000)
   }
 
   const handleRemoveQuestion = (id: string) => {
     setQuestions(questions.filter(q => q.id !== id))
+    if (editingQuestionId === id) {
+      setEditingQuestionId(null)
+      setCurrentQuestion('')
+      setCurrentAnswers([
+        { id: uuidv4(), text: '', isCorrect: false, color: 'red' },
+        { id: uuidv4(), text: '', isCorrect: false, color: 'blue' },
+        { id: uuidv4(), text: '', isCorrect: false, color: 'yellow' },
+        { id: uuidv4(), text: '', isCorrect: false, color: 'green' },
+      ])
+      setTimeLimit(20)
+      setPoints(1000)
+    }
   }
 
   const handleUpdateAnswer = (id: string, text: string) => {
@@ -72,6 +96,29 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
     setCurrentAnswers(currentAnswers.map(a => 
       ({ ...a, isCorrect: a.id === id })
     ))
+  }
+
+  const handleEditQuestion = (id: string) => {
+    const question = questions.find((q) => q.id === id)
+    if (!question) return
+    setEditingQuestionId(id)
+    setCurrentQuestion(question.text)
+    setCurrentAnswers(question.answers.map((answer) => ({ ...answer })))
+    setTimeLimit(question.timeLimit)
+    setPoints(question.points)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingQuestionId(null)
+    setCurrentQuestion('')
+    setCurrentAnswers([
+      { id: uuidv4(), text: '', isCorrect: false, color: 'red' },
+      { id: uuidv4(), text: '', isCorrect: false, color: 'blue' },
+      { id: uuidv4(), text: '', isCorrect: false, color: 'yellow' },
+      { id: uuidv4(), text: '', isCorrect: false, color: 'green' },
+    ])
+    setTimeLimit(20)
+    setPoints(1000)
   }
 
   const handleSubmit = () => {
@@ -119,7 +166,9 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
 
         <Card className="mb-6 border border-border shadow-sm">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-medium">Ajouter une question</CardTitle>
+            <CardTitle className="text-lg font-medium">
+              {editingQuestionId ? 'Modifier une question' : 'Ajouter une question'}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
@@ -132,36 +181,47 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
               />
             </div>
 
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-foreground">Réponses</p>
+              <p className="text-xs text-muted-foreground">Choisissez la bonne réponse</p>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {currentAnswers.map((answer, index) => (
-                <div key={answer.id} className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${getAnswerDotClass(answer.color)}`} />
-                    Réponse {index + 1}
-                    {answer.isCorrect && (
-                      <Tick02Icon className="w-4 h-4 text-[hsl(var(--answer-green))]" />
-                    )}
-                  </label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder={`Réponse ${index + 1}`}
-                      value={answer.text}
-                      onChange={(e) => handleUpdateAnswer(answer.id, e.target.value)}
-                      className={`border-border focus-visible:ring-foreground ${answer.isCorrect ? 'border-[hsl(var(--answer-green))]' : ''}`}
-                    />
+                <div
+                  key={answer.id}
+                  className={`space-y-3 rounded-xl border p-3 ${answer.isCorrect ? 'border-[hsl(var(--answer-green))] bg-[hsl(var(--answer-green))]/5' : 'border-border bg-background'}`}
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${getAnswerDotClass(answer.color)}`} />
+                      Réponse {index + 1}
+                    </label>
                     <Button
                       variant={answer.isCorrect ? 'default' : 'outline'}
-                      size="icon"
+                      size="sm"
                       onClick={() => handleSetCorrectAnswer(answer.id)}
-                      className={answer.isCorrect ? 'bg-[hsl(var(--answer-green))] hover:bg-[hsl(var(--answer-green))]/90 border-0' : 'border-border'}
+                      className={`w-full sm:w-auto rounded-lg ${answer.isCorrect ? 'bg-[hsl(var(--answer-green))] hover:bg-[hsl(var(--answer-green))]/90 border-0' : 'border-border'}`}
                     >
                       {answer.isCorrect ? (
-                        <Tick02Icon className="w-4 h-4" />
+                        <>
+                          <Tick02Icon className="w-4 h-4 mr-2" />
+                          Bonne réponse
+                        </>
                       ) : (
-                        <Cancel01Icon className="w-4 h-4" />
+                        <>
+                          <Cancel01Icon className="w-4 h-4 mr-2" />
+                          Marquer
+                        </>
                       )}
                     </Button>
                   </div>
+                  <Input
+                    placeholder={`Réponse ${index + 1}`}
+                    value={answer.text}
+                    onChange={(e) => handleUpdateAnswer(answer.id, e.target.value)}
+                    className={`border-border focus-visible:ring-foreground ${answer.isCorrect ? 'border-[hsl(var(--answer-green))]' : ''}`}
+                  />
                 </div>
               ))}
             </div>
@@ -205,8 +265,17 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
               disabled={!currentQuestion.trim() || currentAnswers.some(a => !a.text.trim()) || !hasCorrectAnswer}
               icon={<PlusSignIcon className="w-5 h-5" />}
             >
-              Ajouter la question
+              {editingQuestionId ? 'Mettre à jour la question' : 'Ajouter la question'}
             </CustomButton>
+            {editingQuestionId && (
+              <Button
+                variant="ghost"
+                onClick={handleCancelEdit}
+                className="w-full hover:bg-muted"
+              >
+                Annuler la modification
+              </Button>
+            )}
             {!hasCorrectAnswer && (
               <p className="text-sm text-muted-foreground text-center">
                 Sélectionnez la bonne réponse pour continuer.
@@ -235,14 +304,24 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
                       {q.answers.length} réponses · {q.timeLimit}s · {q.points} pts
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveQuestion(q.id)}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10 self-end sm:self-auto"
-                  >
-                    <Delete02Icon className="w-5 h-5" />
-                  </Button>
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEditQuestion(q.id)}
+                      className="hover:bg-muted"
+                    >
+                      <Edit02Icon className="w-5 h-5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveQuestion(q.id)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Delete02Icon className="w-5 h-5" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </CardContent>
