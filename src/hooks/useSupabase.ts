@@ -329,7 +329,8 @@ export function useSupabase() {
     })
 
     if (error) throw error
-    return data as SubmitAnswerResult
+    const result = Array.isArray(data) ? data[0] : data
+    return result as SubmitAnswerResult
   }, [ensureAuth])
 
   const getWaitingSessionByCode = useCallback(async (code: string) => {
