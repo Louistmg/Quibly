@@ -3,6 +3,9 @@ node_modules/
 .pnpm/
 .pnpm-workspace-state-v1.json
 
+AGENTS.md
+@agents.md
+
 # Build output
 dist/
 *.log
@@ -32,5 +35,3 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
-
-AGENTS.md
