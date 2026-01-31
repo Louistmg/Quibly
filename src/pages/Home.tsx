@@ -227,7 +227,7 @@ export function Home({ onCreate, onJoin }: HomeProps) {
             </p>
             <div className="flex items-center gap-6">
               <a 
-                href="https://github.com/quibly/quibly" 
+                href="https://github.com/Louistmg/Quibly" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
