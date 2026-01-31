@@ -122,7 +122,7 @@ function App() {
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   const [isHost, setIsHost] = useState(false)
   
-  const { createQuiz, createGameSession, joinGame, updateSessionState, getQuizByCode, getWaitingSessionByCode, getSessionById, getPlayerById, getPlayerBySession, removePlayer, subscribeToGameSession, ensureAuth, loading, error } = useSupabase()
+  const { createQuiz, createGameSession, joinGame, updateSessionState, getQuizByCode, getWaitingSessionByCode, getSessionById, getPlayerById, getPlayerBySession, removePlayer, deleteGameSession, subscribeToGameSession, ensureAuth, loading, error } = useSupabase()
 
   const clearActiveSession = useCallback(() => {
     clearStoredSession()
@@ -134,7 +134,13 @@ function App() {
   }, [])
 
   const handleQuit = useCallback(async () => {
-    if (currentPlayer?.id) {
+    if (isHost && currentSession?.id) {
+      try {
+        await deleteGameSession(currentSession.id)
+      } catch (err) {
+        console.error('Erreur lors de la suppression de la partie :', err)
+      }
+    } else if (currentPlayer?.id) {
       try {
         await removePlayer(currentPlayer.id)
       } catch (err) {
@@ -142,7 +148,7 @@ function App() {
       }
     }
     clearActiveSession()
-  }, [clearActiveSession, currentPlayer?.id, removePlayer])
+  }, [clearActiveSession, currentPlayer?.id, currentSession?.id, deleteGameSession, isHost, removePlayer])
 
   useEffect(() => {
     ensureAuth().catch((err: unknown) => {
