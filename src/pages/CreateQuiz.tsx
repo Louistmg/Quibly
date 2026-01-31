@@ -132,7 +132,7 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {currentAnswers.map((answer, index) => (
                 <div key={answer.id} className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -166,7 +166,7 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
               ))}
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <label className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                   <Clock01Icon className="w-4 h-4" />
@@ -224,11 +224,11 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
               {questions.map((q, index) => (
                 <div
                   key={q.id}
-                  className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-muted/50 rounded-lg border border-border"
                 >
                   <div>
-                    <p className="font-medium text-foreground">{index + 1}. {q.text}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="font-medium text-foreground break-words">{index + 1}. {q.text}</p>
+                    <p className="text-sm text-muted-foreground mt-1 break-words">
                       Bonne réponse : {q.answers.find(a => a.isCorrect)?.text || 'Non définie'}
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -239,7 +239,7 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleRemoveQuestion(q.id)}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 self-end sm:self-auto"
                   >
                     <Delete02Icon className="w-5 h-5" />
                   </Button>

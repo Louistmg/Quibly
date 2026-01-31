@@ -199,7 +199,7 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
         </div>
 
         {phase === 'question' && (
-          <div className="grid grid-cols-2 gap-4 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
             {currentQuestion.answers.map((answer) => (
               <div
                 key={answer.id}
@@ -293,18 +293,18 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
                   {rankedPlayers.map((player, index) => (
                     <div
                       key={player.id}
-                      className="flex items-center justify-between p-4 bg-muted/40 rounded-xl border border-border transition-all duration-500"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-muted/40 rounded-xl border border-border transition-all duration-500"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center font-medium">
                           {(player.name?.[0] ?? '?').toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-medium text-foreground">{player.name}</p>
+                          <p className="font-medium text-foreground break-words">{player.name}</p>
                           <p className="text-sm text-muted-foreground">#{index + 1}</p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-left sm:text-right">
                         <p className="text-lg font-medium text-foreground">{player.score}</p>
                         <p className="text-sm text-muted-foreground">pts</p>
                       </div>
