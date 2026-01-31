@@ -44,7 +44,7 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
   const [answerResult, setAnswerResult] = useState<{ isCorrect: boolean; pointsEarned: number; correctAnswerId: string | null } | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
-  const { submitAnswer, getAnswerStats, advanceSessionPhase } = useSupabase()
+  const { submitAnswer, getAnswerStats } = useSupabase()
 
   const currentQuestionIndex = session?.currentQuestionIndex ?? 0
   const currentQuestion: Question | undefined = quiz?.questions[currentQuestionIndex]
@@ -81,15 +81,10 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
       setAnswerResult(null)
       setSubmissionError('Impossible de valider la réponse pour le moment.')
     } finally {
-      if (session?.id) {
-        advanceSessionPhase(session.id).catch((advanceError) => {
-          console.error('Error advancing session phase:', advanceError)
-        })
-      }
       setIsSubmitting(false)
     }
 
-  }, [advanceSessionPhase, currentQuestion, isSubmitting, phase, player, session?.id, submitAnswer, timeRemaining])
+  }, [currentQuestion, isSubmitting, phase, player, submitAnswer, timeRemaining])
 
   useEffect(() => {
     if (!player) return
@@ -144,25 +139,9 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
     })()
   }, [answerResult?.correctAnswerId, currentQuestion, getAnswerStats, serverCorrectAnswerId, session?.id, showResult])
 
-  useEffect(() => {
-    if (!session?.id) return
-    if (phase !== 'question' && phase !== 'results') return
-    const interval = setInterval(() => {
-      void advanceSessionPhase(session.id).catch(() => {})
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [advanceSessionPhase, phase, session?.id])
-
   if (!currentQuestion) return null
 
-  const selectedAnswerText = selectedAnswer
-    ? currentQuestion.answers.find((answer) => answer.id === selectedAnswer)?.text ?? null
-    : null
-
   const resolvedCorrectAnswerId = answerResult?.correctAnswerId ?? serverCorrectAnswerId
-  const correctAnswerText = resolvedCorrectAnswerId
-    ? currentQuestion.answers.find((answer) => answer.id === resolvedCorrectAnswerId)?.text ?? null
-    : null
   const canAnswer = phase === 'question'
   const hasSelectedAnswer = Boolean(selectedAnswer)
   const isAnswerCorrect = resolvedCorrectAnswerId
@@ -292,20 +271,6 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
             </div>
           )}
 
-          {!submissionError && (
-            <div className="text-sm text-white/70">
-              {selectedAnswerText && (
-                <p>
-                  Votre réponse : <span className="text-white font-medium">{selectedAnswerText}</span>
-                </p>
-              )}
-              {correctAnswerText && (
-                <p>
-                  Bonne réponse : <span className="text-white font-medium">{correctAnswerText}</span>
-                </p>
-              )}
-            </div>
-          )}
         </div>
       )}
 
