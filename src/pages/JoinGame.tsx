@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Button as CustomButton } from '@/components/ui/custom-button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft01Icon, UserIcon, HashtagIcon, ArrowRight01Icon } from 'hugeicons-react'
+import { ArrowLeft01Icon, UserIcon, HashtagIcon } from 'hugeicons-react'
 
 interface JoinGameProps {
   onJoin: (code: string, playerName: string) => void
@@ -47,7 +47,7 @@ export function JoinGame({ onJoin, onBack, isLoading }: JoinGameProps) {
                   placeholder="Exemple : ABC123"
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  className="font-medium tracking-wider border-border focus-visible:ring-foreground"
+                  className="tracking-wider border-border focus-visible:ring-foreground"
                   maxLength={6}
                 />
               </div>
@@ -70,7 +70,6 @@ export function JoinGame({ onJoin, onBack, isLoading }: JoinGameProps) {
                 type="submit"
                 className="w-full"
                 disabled={!code.trim() || !playerName.trim() || isLoading}
-                icon={<ArrowRight01Icon className="w-5 h-5" />}
               >
                 {isLoading ? 'Connexion...' : 'Rejoindre'}
               </CustomButton>
