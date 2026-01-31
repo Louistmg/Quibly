@@ -150,10 +150,14 @@ export function PlayGame({ session, quiz, player }: PlayGameProps) {
 
   useEffect(() => {
     if (!currentQuestion || phase !== 'question' || hasSubmittedRef.current) return
+    if (!session?.questionStartedAt) return
+    const startTime = new Date(session.questionStartedAt)
+    const elapsedMs = Date.now() - startTime.getTime()
+    if (elapsedMs < currentQuestion.timeLimit * 1000) return
     if (timeRemaining === 0) {
       void handleAnswer(null)
     }
-  }, [currentQuestion, timeRemaining, phase, handleAnswer])
+  }, [currentQuestion, phase, handleAnswer, session?.questionStartedAt, timeRemaining])
 
   const rankedPlayers = useMemo(() => {
     return [...players].sort((a, b) => b.score - a.score)
