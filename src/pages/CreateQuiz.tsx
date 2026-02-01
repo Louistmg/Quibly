@@ -304,7 +304,7 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
                       {q.answers.length} réponses · {q.timeLimit}s · {q.points} pts
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <div className="flex items-center gap-0 self-end sm:self-auto">
                     <Button
                       variant="ghost"
                       size="icon"
