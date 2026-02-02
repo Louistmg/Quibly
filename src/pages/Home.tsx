@@ -1,5 +1,13 @@
-import { Card, CardContent } from '@/components/ui/card'
-import { Button as CustomButton } from '@/components/ui/custom-button'
+import { Card, CardContent } from "@/components/ui/card";
+import { Button as CustomButton } from "@/components/ui/custom-button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   GameController01Icon,
   UserGroupIcon,
@@ -9,12 +17,14 @@ import {
   ZapIcon,
   GithubIcon,
   GitPullRequestIcon,
-  RocketIcon
-} from 'hugeicons-react'
+  RocketIcon,
+  CheckmarkCircle02Icon,
+  Cancel01Icon,
+} from "hugeicons-react";
 
 interface HomeProps {
-  onCreate: () => void
-  onJoin: () => void
+  onCreate: () => void;
+  onJoin: () => void;
 }
 
 export function Home({ onCreate, onJoin }: HomeProps) {
@@ -26,22 +36,26 @@ export function Home({ onCreate, onJoin }: HomeProps) {
           <CustomButton
             variant="secondary"
             icon={<GithubIcon className="w-4 h-4" />}
-            onClick={() => window.open('https://github.com/Louistmg/Quibly', '_blank')}
+            onClick={() =>
+              window.open("https://github.com/Louistmg/Quibly", "_blank")
+            }
           >
             Star
           </CustomButton>
         </div>
       </nav>
 
-      <section className="min-h-[calc(100dvh-4rem)] flex flex-col justify-center px-6 py-16 md:py-0 md:items-center">
+      <section className="min-h-[calc(100dvh-4rem)] flex flex-col justify-center px-10 sm:px-8 md:px-6 py-16 md:py-0 md:items-center">
         <div className="max-w-2xl md:mx-auto text-left md:text-center">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-medium tracking-tight text-foreground mb-4 leading-tight">
-            Créez des quiz captivants et jouez avec vos amis
+            L'alternative gratuite à Kahoot pour vos quiz
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground md:max-w-xl md:mx-auto leading-snug mb-8">
-            Quibly vous permet de créer facilement des quiz personnalisés et de défier vos amis, votre famille ou vos collègues en temps réel. Une expérience de jeu simple, rapide et divertissante.
+            Créez des QCM, définissez le chrono et les points, puis lancez une
+            partie en temps réel. Un code de 6 caractères et un pseudo suffisent
+            pour rejoindre, sans inscription.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:justify-center w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-3 md:justify-center w-full sm:w-auto">
             <CustomButton
               variant="primary"
               onClick={onCreate}
@@ -66,19 +80,31 @@ export function Home({ onCreate, onJoin }: HomeProps) {
         <div className="container mx-auto px-6 py-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto text-center">
             <div>
-              <p className="text-3xl md:text-4xl font-medium text-foreground">13K+</p>
-              <p className="text-sm text-muted-foreground mt-1">Joueurs uniques</p>
+              <p className="text-3xl md:text-4xl font-medium text-foreground">
+                13K+
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Joueurs uniques
+              </p>
             </div>
             <div>
-              <p className="text-3xl md:text-4xl font-medium text-foreground">4K+</p>
+              <p className="text-3xl md:text-4xl font-medium text-foreground">
+                4K+
+              </p>
               <p className="text-sm text-muted-foreground mt-1">Quiz créés</p>
             </div>
             <div>
-              <p className="text-3xl md:text-4xl font-medium text-foreground">50K+</p>
-              <p className="text-sm text-muted-foreground mt-1">Parties jouées</p>
+              <p className="text-3xl md:text-4xl font-medium text-foreground">
+                50K+
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Parties jouées
+              </p>
             </div>
             <div>
-              <p className="text-3xl md:text-4xl font-medium text-foreground">99%</p>
+              <p className="text-3xl md:text-4xl font-medium text-foreground">
+                99%
+              </p>
               <p className="text-sm text-muted-foreground mt-1">Satisfaction</p>
             </div>
           </div>
@@ -87,48 +113,146 @@ export function Home({ onCreate, onJoin }: HomeProps) {
 
       <section id="fonctionnalites" className="container mx-auto px-6 py-36">
         <div className="text-center mb-12">
-          <h2 className="text-2xl md:text-3xl font-medium mb-3">Fonctionnalités</h2>
+          <h2 className="text-2xl md:text-3xl font-medium mb-3">
+            Fonctionnalités
+          </h2>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
           <Card className="border-border">
             <CardContent className="p-5">
-              <div className="w-8 h-8 rounded-lg bg-foreground/10 flex items-center justify-center mb-3">
+              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center mb-3">
                 <GameController01Icon className="w-4 h-4" />
               </div>
-              <h3 className="text-base font-medium mb-1">Création simple</h3>
-              <p className="text-sm text-muted-foreground">Créez vos quiz en quelques minutes avec une interface intuitive</p>
+              <h3 className="text-base font-medium mb-1">QCM interactifs</h3>
+              <p className="text-sm text-muted-foreground">
+                Rédigez des questions avec des réponses colorées et une seule
+                bonne réponse
+              </p>
             </CardContent>
           </Card>
 
           <Card className="border-border">
             <CardContent className="p-5">
-              <div className="w-8 h-8 rounded-lg bg-foreground/10 flex items-center justify-center mb-3">
+              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center mb-3">
                 <UserGroupIcon className="w-4 h-4" />
               </div>
-              <h3 className="text-base font-medium mb-1">Jusqu'à 100 joueurs</h3>
-              <p className="text-sm text-muted-foreground">Invitez vos amis, collègues ou famille à jouer ensemble</p>
+              <h3 className="text-base font-medium mb-1">Code de partie</h3>
+              <p className="text-sm text-muted-foreground">
+                Un code de 6 caractères et un pseudo suffisent pour rejoindre
+              </p>
             </CardContent>
           </Card>
 
           <Card className="border-border">
             <CardContent className="p-5">
-              <div className="w-8 h-8 rounded-lg bg-foreground/10 flex items-center justify-center mb-3">
+              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center mb-3">
                 <ZapIcon className="w-4 h-4" />
               </div>
-              <h3 className="text-base font-medium mb-1">Temps réel</h3>
-              <p className="text-sm text-muted-foreground">Réponses instantanées et compte à rebours pour plus de suspense</p>
+              <h3 className="text-base font-medium mb-1">Chrono & points</h3>
+              <p className="text-sm text-muted-foreground">
+                Définissez le temps par question et les points attribués
+              </p>
             </CardContent>
           </Card>
 
           <Card className="border-border">
             <CardContent className="p-5">
-              <div className="w-8 h-8 rounded-lg bg-foreground/10 flex items-center justify-center mb-3">
+              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center mb-3">
                 <CrownIcon className="w-4 h-4" />
               </div>
-              <h3 className="text-base font-medium mb-1">Classement automatique</h3>
-              <p className="text-sm text-muted-foreground">Points calculés automatiquement selon la rapidité des réponses</p>
+              <h3 className="text-base font-medium mb-1">
+                Classement en direct
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Résultats par question et classement mis à jour en temps réel
+              </p>
             </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      <section id="comparaison" className="container mx-auto px-6 py-32">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl md:text-3xl font-medium mb-3">
+            Comparaison : Kahoot vs Quibly
+          </h2>
+        </div>
+
+        <div className="max-w-4xl mx-auto">
+          <Card className="border-border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[50%] py-4 px-6">
+                    Fonctionnalité
+                  </TableHead>
+                  <TableHead className="text-center py-4 px-4">
+                    <span className="text-muted-foreground">Kahoot</span>
+                  </TableHead>
+                  <TableHead className="text-center py-4 px-4">
+                    <span>Quibly</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="py-4 px-6 text-muted-foreground">
+                    Sans inscription pour créer
+                  </TableCell>
+                  <TableCell className="text-center py-4">
+                    <Cancel01Icon className="w-5 h-5 text-destructive mx-auto" />
+                  </TableCell>
+                  <TableCell className="text-center py-4">
+                    <CheckmarkCircle02Icon className="w-5 h-5 text-green-600 mx-auto" />
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="py-4 px-6 text-muted-foreground">
+                    Sans inscription pour jouer
+                  </TableCell>
+                  <TableCell className="text-center py-4">
+                    <CheckmarkCircle02Icon className="w-5 h-5 text-green-600 mx-auto" />
+                  </TableCell>
+                  <TableCell className="text-center py-4">
+                    <CheckmarkCircle02Icon className="w-5 h-5 text-green-600 mx-auto" />
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="py-4 px-6 text-muted-foreground">
+                    Participants en live
+                  </TableCell>
+                  <TableCell className="text-center py-4">
+                    <span className="text-sm text-muted-foreground">10</span>
+                  </TableCell>
+                  <TableCell className="text-center py-4">
+                    <span className="text-sm">Illimité</span>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="py-4 px-6 text-muted-foreground">
+                    Points personnalisables
+                  </TableCell>
+                  <TableCell className="text-center py-4">
+                    <Cancel01Icon className="w-5 h-5 text-destructive mx-auto" />
+                  </TableCell>
+                  <TableCell className="text-center py-4">
+                    <CheckmarkCircle02Icon className="w-5 h-5 text-green-600 mx-auto" />
+                  </TableCell>
+                </TableRow>
+                <TableRow className="border-b-0">
+                  <TableCell className="py-4 px-6 text-muted-foreground">
+                    Code source accessible
+                  </TableCell>
+                  <TableCell className="text-center py-4">
+                    <Cancel01Icon className="w-5 h-5 text-destructive mx-auto" />
+                  </TableCell>
+                  <TableCell className="text-center py-4">
+                    <CheckmarkCircle02Icon className="w-5 h-5 text-green-600 mx-auto" />
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
           </Card>
         </div>
       </section>
@@ -141,31 +265,37 @@ export function Home({ onCreate, onJoin }: HomeProps) {
         <div className="grid md:grid-cols-3 gap-4 max-w-5xl mx-auto">
           <Card className="border-border">
             <CardContent className="p-5">
-              <div className="w-8 h-8 rounded-lg bg-foreground/10 flex items-center justify-center mb-3">
+              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center mb-3">
                 <GithubIcon className="w-4 h-4" />
               </div>
               <h3 className="text-base font-medium mb-1">Code source ouvert</h3>
-              <p className="text-sm text-muted-foreground">Accédez au code complet sur GitHub et adaptez-le à vos besoins</p>
+              <p className="text-sm text-muted-foreground">
+                Accédez au code complet sur GitHub et adaptez-le à vos besoins
+              </p>
             </CardContent>
           </Card>
 
           <Card className="border-border">
             <CardContent className="p-5">
-              <div className="w-8 h-8 rounded-lg bg-foreground/10 flex items-center justify-center mb-3">
+              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center mb-3">
                 <GitPullRequestIcon className="w-4 h-4" />
               </div>
               <h3 className="text-base font-medium mb-1">Contribuez</h3>
-              <p className="text-sm text-muted-foreground">Ouvrez des issues et proposez vos idées d'amélioration</p>
+              <p className="text-sm text-muted-foreground">
+                Ouvrez des issues et proposez vos idées d'amélioration
+              </p>
             </CardContent>
           </Card>
 
           <Card className="border-border">
             <CardContent className="p-5">
-              <div className="w-8 h-8 rounded-lg bg-foreground/10 flex items-center justify-center mb-3">
+              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center mb-3">
                 <RocketIcon className="w-4 h-4" />
               </div>
               <h3 className="text-base font-medium mb-1">Mises à jour</h3>
-              <p className="text-sm text-muted-foreground">Suivez les nouvelles fonctionnalités et les corrections</p>
+              <p className="text-sm text-muted-foreground">
+                Suivez les nouvelles fonctionnalités et les corrections
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -173,37 +303,48 @@ export function Home({ onCreate, onJoin }: HomeProps) {
 
       <section id="comment-ca-marche" className="container mx-auto px-6 py-32">
         <div className="text-center mb-10">
-          <h2 className="text-2xl md:text-3xl font-medium mb-3">Comment ça marche ?</h2>
+          <h2 className="text-2xl md:text-3xl font-medium mb-3">
+            Comment ça marche ?
+          </h2>
         </div>
 
         <div className="grid md:grid-cols-3 gap-4 max-w-5xl mx-auto">
           <Card className="border-border">
             <CardContent className="p-6">
-              <div className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center text-sm font-medium mb-3">
+              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-sm font-medium mb-3">
                 1
               </div>
               <h3 className="text-base font-medium mb-1">Créez votre quiz</h3>
-              <p className="text-sm text-muted-foreground">Choisissez un titre, ajoutez vos questions et définissez les bonnes réponses avec les points attribués</p>
+              <p className="text-sm text-muted-foreground">
+                Ajoutez un titre, une description, des questions, puis
+                choisissez la bonne réponse, le chrono et les points
+              </p>
             </CardContent>
           </Card>
 
           <Card className="border-border">
             <CardContent className="p-6">
-              <div className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center text-sm font-medium mb-3">
+              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-sm font-medium mb-3">
                 2
               </div>
               <h3 className="text-base font-medium mb-1">Partagez le code</h3>
-              <p className="text-sm text-muted-foreground">Un code unique de 6 caractères est généré. Partagez-le avec vos amis pour qu'ils rejoignent la partie</p>
+              <p className="text-sm text-muted-foreground">
+                Un code unique de 6 caractères est généré. Les joueurs entrent
+                le code et un pseudo pour rejoindre
+              </p>
             </CardContent>
           </Card>
 
           <Card className="border-border">
             <CardContent className="p-6">
-              <div className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center text-sm font-medium mb-3">
+              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-sm font-medium mb-3">
                 3
               </div>
               <h3 className="text-base font-medium mb-1">Lancez la partie</h3>
-              <p className="text-sm text-muted-foreground">Lancez la partie et jouez en temps réel avec un classement qui se met à jour instantanément</p>
+              <p className="text-sm text-muted-foreground">
+                Réponses en direct, résultats par question et classement final
+                en temps réel
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -211,11 +352,14 @@ export function Home({ onCreate, onJoin }: HomeProps) {
 
       <section className="container mx-auto px-6 pt-32 pb-56">
         <div className="max-w-2xl md:mx-auto text-left md:text-center">
-          <h2 className="text-2xl md:text-3xl font-medium mb-3">Prêt à jouer ?</h2>
+          <h2 className="text-2xl md:text-3xl font-medium mb-3">
+            Prêt à jouer ?
+          </h2>
           <p className="text-muted-foreground mb-6">
-            Rejoignez des milliers d'utilisateurs qui animent leurs événements avec Quibly. Créez votre premier quiz gratuitement en quelques clics et défiez vos amis.
+            Passez à Quibly, l'alternative gratuite à Kahoot. Créez un quiz,
+            partagez un code et jouez en direct en quelques clics.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:justify-center w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-3 md:justify-center w-full sm:w-auto">
             <CustomButton
               variant="primary"
               onClick={onCreate}
@@ -244,18 +388,24 @@ export function Home({ onCreate, onJoin }: HomeProps) {
               Une alternative open source et gratuite à Kahoot
             </p>
             <div className="flex items-center gap-6">
-              <a 
-                href="https://github.com/Louistmg/Quibly" 
-                target="_blank" 
+              <a
+                href="https://github.com/Louistmg/Quibly"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 GitHub
               </a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <a
+                href="#"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
                 Conditions
               </a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <a
+                href="#"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
                 Confidentialité
               </a>
             </div>
@@ -263,5 +413,5 @@ export function Home({ onCreate, onJoin }: HomeProps) {
         </div>
       </footer>
     </div>
-  )
+  );
 }
