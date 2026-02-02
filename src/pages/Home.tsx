@@ -185,78 +185,80 @@ export function Home({ onCreate, onJoin }: HomeProps) {
 
         <div className="max-w-4xl mx-auto">
           <Card className="border-border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[50%] py-4 px-6">
-                    Fonctionnalité
-                  </TableHead>
-                  <TableHead className="text-center py-4 px-4">
-                    <span className="text-muted-foreground">Kahoot</span>
-                  </TableHead>
-                  <TableHead className="text-center py-4 px-4">
-                    <span>Quibly</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell className="py-4 px-6 text-muted-foreground">
-                    Sans inscription pour créer
-                  </TableCell>
-                  <TableCell className="text-center py-4">
-                    <Cancel01Icon className="w-5 h-5 text-destructive mx-auto" />
-                  </TableCell>
-                  <TableCell className="text-center py-4">
-                    <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="py-4 px-6 text-muted-foreground">
-                    Sans inscription pour jouer
-                  </TableCell>
-                  <TableCell className="text-center py-4">
-                    <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
-                  </TableCell>
-                  <TableCell className="text-center py-4">
-                    <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="py-4 px-6 text-muted-foreground">
-                    Participants en live
-                  </TableCell>
-                  <TableCell className="text-center py-4">
-                    <span className="text-sm text-muted-foreground">10</span>
-                  </TableCell>
-                  <TableCell className="text-center py-4">
-                    <span className="text-sm">Illimité</span>
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="py-4 px-6 text-muted-foreground">
-                    Points personnalisables
-                  </TableCell>
-                  <TableCell className="text-center py-4">
-                    <Cancel01Icon className="w-5 h-5 text-destructive mx-auto" />
-                  </TableCell>
-                  <TableCell className="text-center py-4">
-                    <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
-                  </TableCell>
-                </TableRow>
-                <TableRow className="border-b-0">
-                  <TableCell className="py-4 px-6 text-muted-foreground">
-                    Code source accessible
-                  </TableCell>
-                  <TableCell className="text-center py-4">
-                    <Cancel01Icon className="w-5 h-5 text-destructive mx-auto" />
-                  </TableCell>
-                  <TableCell className="text-center py-4">
-                    <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="sm:w-1/2 py-3 sm:py-4 px-4 sm:px-6">
+                      Fonctionnalité
+                    </TableHead>
+                    <TableHead className="text-center py-3 sm:py-4 px-3 sm:px-4">
+                      <span className="text-muted-foreground">Kahoot</span>
+                    </TableHead>
+                    <TableHead className="text-center py-3 sm:py-4 px-3 sm:px-4">
+                      <span>Quibly</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="py-3 sm:py-4 px-4 sm:px-6 text-muted-foreground">
+                      Sans inscription pour créer
+                    </TableCell>
+                    <TableCell className="text-center py-3 sm:py-4">
+                      <Cancel01Icon className="w-5 h-5 text-destructive mx-auto" />
+                    </TableCell>
+                    <TableCell className="text-center py-3 sm:py-4">
+                      <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="py-3 sm:py-4 px-4 sm:px-6 text-muted-foreground">
+                      Sans inscription pour jouer
+                    </TableCell>
+                    <TableCell className="text-center py-3 sm:py-4">
+                      <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
+                    </TableCell>
+                    <TableCell className="text-center py-3 sm:py-4">
+                      <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="py-3 sm:py-4 px-4 sm:px-6 text-muted-foreground">
+                      Participants en live
+                    </TableCell>
+                    <TableCell className="text-center py-3 sm:py-4">
+                      <span className="text-sm text-muted-foreground">10</span>
+                    </TableCell>
+                    <TableCell className="text-center py-3 sm:py-4">
+                      <span className="text-sm">Illimité</span>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="py-3 sm:py-4 px-4 sm:px-6 text-muted-foreground">
+                      Points personnalisables
+                    </TableCell>
+                    <TableCell className="text-center py-3 sm:py-4">
+                      <Cancel01Icon className="w-5 h-5 text-destructive mx-auto" />
+                    </TableCell>
+                    <TableCell className="text-center py-3 sm:py-4">
+                      <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow className="border-b-0">
+                    <TableCell className="py-3 sm:py-4 px-4 sm:px-6 text-muted-foreground">
+                      Code source accessible
+                    </TableCell>
+                    <TableCell className="text-center py-3 sm:py-4">
+                      <Cancel01Icon className="w-5 h-5 text-destructive mx-auto" />
+                    </TableCell>
+                    <TableCell className="text-center py-3 sm:py-4">
+                      <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
           </Card>
         </div>
       </section>

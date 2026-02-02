@@ -54,6 +54,22 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
   }, [loadPlayers])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    const scrollToTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+    }
+    scrollToTop()
+    const frame = window.requestAnimationFrame(scrollToTop)
+    const timeout = window.setTimeout(scrollToTop, 120)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.clearTimeout(timeout)
+    }
+  }, [session?.id])
+
+  useEffect(() => {
     if (!session?.id) return
     const unsubscribe = subscribeToSession(session.id, () => {
       void loadPlayers()
