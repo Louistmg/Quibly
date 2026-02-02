@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import { GamePhase, Quiz, GameSession, Player } from '@/types'
 import { useSupabase } from '@/hooks/useSupabase'
 import type { Quiz as DbQuiz, Question as DbQuestion, PublicAnswer as DbPublicAnswer, GameSession as DbGameSession, Player as DbPlayer } from '@/lib/supabase'
@@ -186,7 +186,27 @@ function App() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual'
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return
+    const forceScrollTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+    }
+    forceScrollTop()
+    const frame = window.requestAnimationFrame(forceScrollTop)
+    const timeout = window.setTimeout(forceScrollTop, 120)
+    const longerTimeout = window.setTimeout(forceScrollTop, 400)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.clearTimeout(timeout)
+      window.clearTimeout(longerTimeout)
+    }
   }, [phase])
 
   useEffect(() => {
