@@ -193,6 +193,8 @@ function App() {
 
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return
+    const isIos = /iP(hone|od|ad)/.test(window.navigator.userAgent)
+      || (window.navigator.userAgent.includes('Mac') && 'ontouchend' in document)
     const forceScrollTop = () => {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
       document.documentElement.scrollTop = 0
@@ -202,12 +204,51 @@ function App() {
     const frame = window.requestAnimationFrame(forceScrollTop)
     const timeout = window.setTimeout(forceScrollTop, 120)
     const longerTimeout = window.setTimeout(forceScrollTop, 400)
+    const viewport = window.visualViewport
+    let guardTimeout: number | null = null
+    const handleViewportChange = () => forceScrollTop()
+    if (isIos && viewport) {
+      viewport.addEventListener('resize', handleViewportChange)
+      viewport.addEventListener('scroll', handleViewportChange)
+      window.addEventListener('orientationchange', handleViewportChange)
+      guardTimeout = window.setTimeout(() => {
+        viewport.removeEventListener('resize', handleViewportChange)
+        viewport.removeEventListener('scroll', handleViewportChange)
+        window.removeEventListener('orientationchange', handleViewportChange)
+      }, 1500)
+    }
     return () => {
       window.cancelAnimationFrame(frame)
       window.clearTimeout(timeout)
       window.clearTimeout(longerTimeout)
+      if (guardTimeout) {
+        window.clearTimeout(guardTimeout)
+      }
+      if (isIos && viewport) {
+        viewport.removeEventListener('resize', handleViewportChange)
+        viewport.removeEventListener('scroll', handleViewportChange)
+        window.removeEventListener('orientationchange', handleViewportChange)
+      }
     }
   }, [phase])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!currentSession?.id || !currentPlayer?.id || isHost) return
+    let hasHandledExit = false
+    const handleExit = () => {
+      if (hasHandledExit) return
+      hasHandledExit = true
+      clearStoredSession()
+      void removePlayer(currentPlayer.id)
+    }
+    window.addEventListener('beforeunload', handleExit)
+    window.addEventListener('pagehide', handleExit)
+    return () => {
+      window.removeEventListener('beforeunload', handleExit)
+      window.removeEventListener('pagehide', handleExit)
+    }
+  }, [currentPlayer?.id, currentSession?.id, isHost, removePlayer])
 
   useEffect(() => {
     if (typeof window === 'undefined') return

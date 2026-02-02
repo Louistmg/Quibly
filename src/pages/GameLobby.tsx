@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button as CustomButton } from '@/components/ui/custom-button'
 import type { GameSession, Player as UiPlayer, Quiz } from '@/types'
@@ -53,8 +53,10 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
     void loadPlayers()
   }, [loadPlayers])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof window === 'undefined') return
+    const isIos = /iP(hone|od|ad)/.test(window.navigator.userAgent)
+      || (window.navigator.userAgent.includes('Mac') && 'ontouchend' in document)
     const scrollToTop = () => {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
       document.documentElement.scrollTop = 0
@@ -63,9 +65,32 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
     scrollToTop()
     const frame = window.requestAnimationFrame(scrollToTop)
     const timeout = window.setTimeout(scrollToTop, 120)
+    const longerTimeout = window.setTimeout(scrollToTop, 800)
+    const viewport = window.visualViewport
+    let guardTimeout: number | null = null
+    const handleViewportChange = () => scrollToTop()
+    if (isIos && viewport) {
+      viewport.addEventListener('resize', handleViewportChange)
+      viewport.addEventListener('scroll', handleViewportChange)
+      window.addEventListener('orientationchange', handleViewportChange)
+      guardTimeout = window.setTimeout(() => {
+        viewport.removeEventListener('resize', handleViewportChange)
+        viewport.removeEventListener('scroll', handleViewportChange)
+        window.removeEventListener('orientationchange', handleViewportChange)
+      }, 1500)
+    }
     return () => {
       window.cancelAnimationFrame(frame)
       window.clearTimeout(timeout)
+      window.clearTimeout(longerTimeout)
+      if (guardTimeout) {
+        window.clearTimeout(guardTimeout)
+      }
+      if (isIos && viewport) {
+        viewport.removeEventListener('resize', handleViewportChange)
+        viewport.removeEventListener('scroll', handleViewportChange)
+        window.removeEventListener('orientationchange', handleViewportChange)
+      }
     }
   }, [session?.id])
 
