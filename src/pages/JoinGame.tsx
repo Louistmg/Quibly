@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { Button as CustomButton } from '@/components/ui/custom-button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,10 +26,14 @@ export function JoinGame({ onJoin, onBack, isLoading }: JoinGameProps) {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Button variant="ghost" onClick={onBack} className="mb-6 hover:bg-muted">
-          <ArrowLeft01Icon className="w-5 h-5 mr-2" />
+        <CustomButton
+          variant="secondary"
+          onClick={onBack}
+          className="mb-6"
+          icon={<ArrowLeft01Icon className="w-5 h-5" />}
+        >
           Retour
-        </Button>
+        </CustomButton>
 
         <Card className="border border-border shadow-sm">
           <CardHeader className="text-center pb-6">

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button as CustomButton } from '@/components/ui/custom-button'
 import type { GameSession, Player as UiPlayer, Quiz } from '@/types'
@@ -72,10 +71,14 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="container mx-auto max-w-4xl">
-        <Button variant="ghost" onClick={onBack} className="mb-8 hover:bg-muted">
-          <ArrowLeft01Icon className="w-5 h-5 mr-2" />
+        <CustomButton
+          variant="secondary"
+          onClick={onBack}
+          className="mb-8"
+          icon={<ArrowLeft01Icon className="w-5 h-5" />}
+        >
           Quitter la partie
-        </Button>
+        </CustomButton>
 
         <div className="text-center mb-10">
           <h1 className="text-3xl font-medium text-foreground mb-2">

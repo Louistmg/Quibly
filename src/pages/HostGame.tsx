@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { StopWatchIcon, ArrowRight01Icon, Tick02Icon, ArrowLeft01Icon } from 'hugeicons-react'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button as CustomButton } from '@/components/ui/custom-button'
 import type { GameSession, Player as UiPlayer, Quiz, Answer } from '@/types'
@@ -179,10 +178,13 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
     <div className="min-h-screen bg-background p-6">
       <div className="container mx-auto max-w-6xl space-y-6">
         <div className="flex justify-end">
-          <Button variant="ghost" onClick={onQuit} className="hover:bg-muted">
-            <ArrowLeft01Icon className="w-4 h-4 mr-2" />
+          <CustomButton
+            variant="secondary"
+            onClick={onQuit}
+            icon={<ArrowLeft01Icon className="w-4 h-4" />}
+          >
             Quitter la partie
-          </Button>
+          </CustomButton>
         </div>
         <div className="text-center space-y-3">
           <p className="text-sm uppercase tracking-wider text-muted-foreground">

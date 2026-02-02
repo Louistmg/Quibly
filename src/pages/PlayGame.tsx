@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { StopWatchIcon, CrownIcon, Tick02Icon, Cancel02Icon, ArrowLeft01Icon } from 'hugeicons-react'
 import { GameSession, Quiz, Player, Question, Answer } from '@/types'
 import { useSupabase } from '@/hooks/useSupabase'
-import { Button } from '@/components/ui/button'
+import { Button as CustomButton } from '@/components/ui/custom-button'
 
 interface PlayGameProps {
   session: GameSession | null
@@ -152,14 +152,13 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
   return (
     <div className="min-h-screen bg-[#1a1a2e] text-white p-4">
       <div className="flex justify-end mb-4">
-        <Button
-          variant="ghost"
+        <CustomButton
+          variant="secondary"
           onClick={onQuit}
-          className="text-white/80 hover:text-white hover:bg-white/10"
+          icon={<ArrowLeft01Icon className="w-4 h-4" />}
         >
-          <ArrowLeft01Icon className="w-4 h-4 mr-2" />
           Quitter la partie
-        </Button>
+        </CustomButton>
       </div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">

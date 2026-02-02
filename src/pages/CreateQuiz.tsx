@@ -131,10 +131,14 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="container mx-auto max-w-4xl">
-        <Button variant="ghost" onClick={onBack} className="mb-8 hover:bg-muted">
-          <ArrowLeft01Icon className="w-5 h-5 mr-2" />
+        <CustomButton
+          variant="secondary"
+          onClick={onBack}
+          className="mb-8"
+          icon={<ArrowLeft01Icon className="w-5 h-5" />}
+        >
           Retour
-        </Button>
+        </CustomButton>
 
         <h1 className="text-3xl font-medium text-foreground mb-10">Créer un quiz</h1>
 

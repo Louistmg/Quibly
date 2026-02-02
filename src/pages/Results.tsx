@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button as CustomButton } from '@/components/ui/custom-button'
 import type { GameSession, Player as UiPlayer } from '@/types'
@@ -133,10 +132,13 @@ export function Results({ session, onBack }: ResultsProps) {
     <div className="min-h-screen bg-background px-6 py-10">
       <div className="container mx-auto max-w-3xl space-y-10">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={onBack} className="hover:bg-muted">
-            <ArrowLeft01Icon className="w-5 h-5 mr-2" />
+          <CustomButton
+            variant="secondary"
+            onClick={onBack}
+            icon={<ArrowLeft01Icon className="w-5 h-5" />}
+          >
             Retour à l'accueil
-          </Button>
+          </CustomButton>
           <span className="text-sm text-muted-foreground">
             {rankedPlayers.length} joueur{rankedPlayers.length > 1 ? 's' : ''}
           </span>
