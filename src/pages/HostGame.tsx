@@ -51,9 +51,10 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
   const isLastQuestion = currentQuestionIndex >= ((quiz?.questions.length ?? 1) - 1)
 
   const [players, setPlayers] = useState<UiPlayer[]>([])
-  const [answerStats, setAnswerStats] = useState<AnswerStats | null>(null)
+  const [answerStats, setAnswerStats] = useState<(AnswerStats & { questionId: string }) | null>(null)
   const [timeRemaining, setTimeRemaining] = useState(() => currentQuestion?.timeLimit ?? 0)
   const [isLoadingStats, setIsLoadingStats] = useState(false)
+  const [hasTimerStarted, setHasTimerStarted] = useState(false)
   const hasAutoAdvancedRef = useRef(false)
   const { getPlayers, subscribeToSession, getAnswerStats, updateSessionState } = useSupabase()
 
@@ -80,18 +81,19 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
 
   const loadAnswerStats = useCallback(async () => {
     if (!session?.id || !currentQuestion) return
-    if (!answerStats) {
+    const hasCurrentStats = answerStats?.questionId === currentQuestion.id
+    if (!hasCurrentStats) {
       setIsLoadingStats(true)
     }
     try {
       const stats = await getAnswerStats(session.id, currentQuestion.id)
-      setAnswerStats(stats)
+      setAnswerStats({ ...stats, questionId: currentQuestion.id })
     } catch (err) {
       console.error('Erreur lors du chargement des réponses :', err)
     } finally {
       setIsLoadingStats(false)
     }
-  }, [answerStats, currentQuestion, getAnswerStats, session?.id])
+  }, [answerStats?.questionId, currentQuestion, getAnswerStats, session?.id])
 
   useEffect(() => {
     void loadPlayers()
@@ -115,11 +117,13 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
   useEffect(() => {
     if (!currentQuestion || phase !== 'question') return
     setTimeRemaining(currentQuestion.timeLimit)
+    setHasTimerStarted(false)
     const startTime = session?.questionStartedAt ?? session?.updatedAt ?? new Date()
     const tick = () => {
       const elapsedSeconds = Math.floor((Date.now() - startTime.getTime()) / 1000)
       const remaining = Math.max(0, currentQuestion.timeLimit - elapsedSeconds)
       setTimeRemaining(remaining)
+      setHasTimerStarted(true)
     }
     tick()
     const interval = setInterval(tick, 500)
@@ -147,24 +151,26 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
       .sort((a, b) => b.score - a.score)
   }, [players])
 
+  const currentStats = currentQuestion && answerStats?.questionId === currentQuestion.id ? answerStats : null
+
   const answersWithCounts = useMemo(() => {
     if (!currentQuestion) return []
-    const statsMap = new Map(answerStats?.answers.map((answer) => [answer.id, answer]) ?? [])
+    const statsMap = new Map(currentStats?.answers.map((answer) => [answer.id, answer]) ?? [])
     return currentQuestion.answers.map((answer) => ({
       ...answer,
       count: statsMap.get(answer.id)?.count ?? 0
     }))
-  }, [answerStats, currentQuestion])
+  }, [currentQuestion, currentStats?.answers])
 
-  const totalAnswers = answerStats?.total_answers ?? 0
-  const totalPlayersForStats = answerStats?.total_players ?? totalPlayers
-  const correctAnswerId = answerStats?.correct_answer_id ?? null
+  const totalAnswers = currentStats?.total_answers ?? 0
+  const totalPlayersForStats = currentStats?.total_players ?? totalPlayers
+  const correctAnswerId = currentStats?.correct_answer_id ?? null
 
   useEffect(() => {
     if (phase !== 'question' || !session?.id) return
     if (hasAutoAdvancedRef.current) return
     const everyoneAnswered = totalPlayersForStats > 0 && totalAnswers >= totalPlayersForStats
-    const timeIsUp = timeRemaining <= 0
+    const timeIsUp = hasTimerStarted && timeRemaining <= 0
     if (!everyoneAnswered && !timeIsUp) return
     hasAutoAdvancedRef.current = true
     void (async () => {
@@ -175,7 +181,7 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
         hasAutoAdvancedRef.current = false
       }
     })()
-  }, [phase, session?.id, timeRemaining, totalAnswers, totalPlayersForStats, updateSessionState])
+  }, [phase, hasTimerStarted, session?.id, timeRemaining, totalAnswers, totalPlayersForStats, updateSessionState])
 
   const handleNextQuestion = async () => {
     if (!session?.id || !quiz) return
@@ -263,7 +269,7 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
               <CardTitle className="text-lg font-medium">Répartition des réponses</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {isLoadingStats && !answerStats ? (
+              {isLoadingStats && !currentStats ? (
                 <p className="text-sm text-muted-foreground">Chargement des réponses...</p>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
