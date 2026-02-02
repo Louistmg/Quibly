@@ -22,6 +22,7 @@ const PlayGame = lazy(() => import('@/pages/PlayGame').then((module) => ({ defau
 const Results = lazy(() => import('@/pages/Results').then((module) => ({ default: module.Results })))
 
 const ACTIVE_SESSION_KEY = 'quibly:active-session'
+const CREATE_QUIZ_DRAFT_KEY = 'quibly:create-quiz-draft'
 
 const normalizeStoredSession = (value: unknown): StoredSession | null => {
   if (!value || typeof value !== 'object') return null
@@ -71,6 +72,11 @@ const writeStoredSession = (value: StoredSession) => {
 const clearStoredSession = () => {
   if (typeof window === 'undefined') return
   window.localStorage.removeItem(ACTIVE_SESSION_KEY)
+}
+
+const clearCreateQuizDraft = () => {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(CREATE_QUIZ_DRAFT_KEY)
 }
 
 const mapQuizFromDb = (quizData: PublicQuizPayload): Quiz => ({
@@ -370,7 +376,8 @@ function App() {
         quizCode: dbSession.code,
         role: 'host',
       })
-      
+
+      clearCreateQuizDraft()
       setPhase('lobby')
     } catch (err) {
       console.error('Error creating quiz:', err)
