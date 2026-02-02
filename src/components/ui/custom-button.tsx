@@ -24,8 +24,8 @@ export function Button({
   const baseStyles = "h-12 px-8 text-sm font-medium rounded-lg inline-flex items-center justify-center"
 
   const variants = {
-    primary: "bg-foreground text-background hover:bg-foreground/90",
-    secondary: "bg-transparent border border-foreground hover:bg-muted text-foreground"
+    primary: "bg-black text-white hover:bg-black/90",
+    secondary: "bg-white text-black border border-black hover:bg-black/5"
   }
 
   return (
