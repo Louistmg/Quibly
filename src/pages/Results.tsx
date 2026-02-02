@@ -139,9 +139,6 @@ export function Results({ session, onBack }: ResultsProps) {
           >
             Retour à l'accueil
           </CustomButton>
-          <span className="text-sm text-muted-foreground">
-            {rankedPlayers.length} joueur{rankedPlayers.length > 1 ? 's' : ''}
-          </span>
         </div>
 
         <div className="text-center space-y-3">
@@ -186,10 +183,7 @@ export function Results({ session, onBack }: ResultsProps) {
 
         <Card className="border border-border shadow-sm">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-medium flex items-center gap-2">
-              <CrownIcon className="w-5 h-5" />
-              Classement final
-            </CardTitle>
+            <CardTitle className="text-lg font-medium">Classement final</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {isLoading ? (

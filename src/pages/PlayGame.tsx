@@ -151,7 +151,7 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
 
   return (
     <div className="min-h-screen bg-[#1a1a2e] text-white p-4">
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-end mb-6">
         <CustomButton
           variant="secondary"
           onClick={onQuit}
