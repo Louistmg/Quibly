@@ -121,6 +121,7 @@ function App() {
   const [currentSession, setCurrentSession] = useState<GameSession | null>(null)
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   const [isHost, setIsHost] = useState(false)
+  const [prefillJoinCode, setPrefillJoinCode] = useState<string | null>(null)
   
   const { createQuiz, createGameSession, joinGame, updateSessionState, getQuizByCode, getWaitingSessionByCode, getSessionById, getPlayerById, getPlayerBySession, removePlayer, deleteGameSession, subscribeToGameSession, ensureAuth, loading, error } = useSupabase()
 
@@ -155,6 +156,21 @@ function App() {
       console.error('Auth error:', err)
     })
   }, [ensureAuth])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (readStoredSession()) return
+
+    const url = new URL(window.location.href)
+    const rawCode = url.searchParams.get('code')
+    if (!rawCode) return
+
+    const normalizedCode = rawCode.trim().toUpperCase().slice(0, 6)
+    if (!normalizedCode) return
+
+    setPrefillJoinCode(normalizedCode)
+    setPhase('join')
+  }, [])
 
   useEffect(() => {
     let isActive = true
@@ -469,6 +485,7 @@ function App() {
             onJoin={handleJoinGame}
             onBack={() => setPhase('home')}
             isLoading={loading}
+            initialCode={prefillJoinCode ?? undefined}
           />
         )
       case 'lobby':

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button as CustomButton } from '@/components/ui/custom-button'
 import type { GameSession, Player as UiPlayer, Quiz } from '@/types'
 import type { Player as DbPlayer } from '@/lib/supabase'
 import { useSupabase } from '@/hooks/useSupabase'
 import { ArrowLeft01Icon, UserGroupIcon, PlayIcon, Copy01Icon, Tick02Icon } from 'hugeicons-react'
+import { toDataURL } from 'qrcode'
 
 interface GameLobbyProps {
   session: GameSession | null
@@ -18,6 +19,8 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
   const [copied, setCopied] = useState(false)
   const [players, setPlayers] = useState<UiPlayer[]>([])
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(false)
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null)
+  const copyTimeoutRef = useRef<number | null>(null)
   const { getPlayers, subscribeToSession } = useSupabase()
 
   const mapDbPlayers = useCallback((dbPlayers: DbPlayer[]): UiPlayer[] => {
@@ -62,11 +65,55 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
     if (session?.code) {
       navigator.clipboard.writeText(session.code)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      if (copyTimeoutRef.current) {
+        window.clearTimeout(copyTimeoutRef.current)
+      }
+      copyTimeoutRef.current = window.setTimeout(() => setCopied(false), 2000)
     }
   }
 
   const gameCode = session?.code ?? ''
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        window.clearTimeout(copyTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    let isActive = true
+
+    const generateQrCode = async () => {
+      if (!gameCode || typeof window === 'undefined') {
+        if (isActive) setQrCodeUrl(null)
+        return
+      }
+
+      try {
+        const baseUrl = `${window.location.origin}${window.location.pathname}`
+        const joinUrl = new URL(baseUrl)
+        joinUrl.searchParams.set('code', gameCode)
+
+        const dataUrl = await toDataURL(joinUrl.toString(), {
+          width: 220,
+          margin: 1,
+          errorCorrectionLevel: 'M',
+        })
+
+        if (isActive) setQrCodeUrl(dataUrl)
+      } catch (err) {
+        console.error('Erreur lors de la génération du QR code :', err)
+        if (isActive) setQrCodeUrl(null)
+      }
+    }
+
+    void generateQrCode()
+    return () => {
+      isActive = false
+    }
+  }, [gameCode])
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -89,7 +136,7 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className={isHost ? "grid md:grid-cols-2 gap-6" : "grid gap-6"}>
           <Card className="border border-border shadow-sm">
             <CardHeader className="text-center pb-4">
               <CardTitle className="flex items-center justify-center gap-2 text-lg font-medium">
@@ -117,46 +164,8 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          <Card className="border border-border shadow-sm">
-            <CardHeader className="text-center pb-4">
-              <CardTitle className="text-lg font-medium">Code de la partie</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="text-center">
-                <div className="text-4xl font-medium tracking-wider text-[hsl(var(--answer-blue))] mb-3">
-                  {gameCode || '—'}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Partagez ce code avec vos amis pour qu'ils rejoignent
-                </p>
-              </div>
-
-              <CustomButton
-                variant="secondary"
-                onClick={handleCopyCode}
-                className="w-full"
-                icon={copied ? <Tick02Icon className="w-5 h-5" /> : <Copy01Icon className="w-5 h-5" />}
-                disabled={!gameCode}
-              >
-                {copied ? 'Code copié' : 'Copier le code'}
-              </CustomButton>
-
-              {isHost && (
-                <CustomButton
-                  variant="primary"
-                  onClick={onStart}
-                  className="w-full bg-[hsl(var(--answer-green))] text-white hover:bg-[hsl(var(--answer-green))]/90"
-                  icon={<PlayIcon className="w-5 h-5" />}
-                >
-                  Lancer la partie
-                </CustomButton>
-              )}
-
               {!isHost && (
-                <div className="text-center p-4 bg-muted/50 rounded-lg border border-border">
+                <div className="mt-5 text-center p-4 bg-muted/50 rounded-lg border border-border">
                   <p className="font-medium text-foreground">En attente du lancement...</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     L'hôte démarrera la partie bientôt
@@ -165,6 +174,49 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
               )}
             </CardContent>
           </Card>
+
+          {isHost && (
+            <Card className="border border-border shadow-sm">
+              <CardHeader className="text-center pb-3">
+                <CardTitle className="text-lg font-medium">Code de la partie</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="flex flex-col items-center gap-4 text-center">
+                  <div className="text-4xl font-medium tracking-wider text-[hsl(var(--answer-blue))]">
+                    {gameCode || '—'}
+                  </div>
+                  {qrCodeUrl && (
+                    <div className="rounded-xl border border-border bg-background p-3 shadow-xs">
+                      <img
+                        src={qrCodeUrl}
+                        alt="QR code pour rejoindre la partie"
+                        className="h-36 w-36"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <CustomButton
+                  variant="secondary"
+                  onClick={handleCopyCode}
+                  className="w-full"
+                  icon={copied ? <Tick02Icon className="w-5 h-5" /> : <Copy01Icon className="w-5 h-5" />}
+                  disabled={!gameCode}
+                >
+                  {copied ? 'Code copié' : 'Copier le code'}
+                </CustomButton>
+
+                <CustomButton
+                  variant="primary"
+                  onClick={onStart}
+                  className="w-full"
+                  icon={<PlayIcon className="w-5 h-5" />}
+                >
+                  Lancer la partie
+                </CustomButton>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

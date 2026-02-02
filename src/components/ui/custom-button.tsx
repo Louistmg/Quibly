@@ -25,7 +25,8 @@ export function Button({
 
   const variants = {
     primary: "bg-black text-white hover:bg-black/90",
-    secondary: "bg-white text-black border border-black hover:bg-black/5"
+    secondary:
+      "bg-[hsl(var(--answer-blue))] text-white hover:bg-[hsl(var(--answer-blue))]/90 border-0"
   }
 
   return (

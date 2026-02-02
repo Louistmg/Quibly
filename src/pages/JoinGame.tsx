@@ -8,10 +8,11 @@ interface JoinGameProps {
   onJoin: (code: string, playerName: string) => void
   onBack: () => void
   isLoading?: boolean
+  initialCode?: string
 }
 
-export function JoinGame({ onJoin, onBack, isLoading }: JoinGameProps) {
-  const [code, setCode] = useState('')
+export function JoinGame({ onJoin, onBack, isLoading, initialCode }: JoinGameProps) {
+  const [code, setCode] = useState(initialCode ? initialCode.toUpperCase() : '')
   const [playerName, setPlayerName] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {

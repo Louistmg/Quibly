@@ -37,7 +37,11 @@ export function Home({ onCreate, onJoin }: HomeProps) {
             variant="secondary"
             icon={<GithubIcon className="w-4 h-4" />}
             onClick={() =>
-              window.open("https://github.com/Louistmg/Quibly", "_blank")
+              window.open(
+                "https://github.com/Louistmg/Quibly",
+                "_blank",
+                "noopener,noreferrer"
+              )
             }
           >
             Star
@@ -204,7 +208,7 @@ export function Home({ onCreate, onJoin }: HomeProps) {
                     <Cancel01Icon className="w-5 h-5 text-destructive mx-auto" />
                   </TableCell>
                   <TableCell className="text-center py-4">
-                    <CheckmarkCircle02Icon className="w-5 h-5 text-green-600 mx-auto" />
+                    <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
                   </TableCell>
                 </TableRow>
                 <TableRow>
@@ -212,10 +216,10 @@ export function Home({ onCreate, onJoin }: HomeProps) {
                     Sans inscription pour jouer
                   </TableCell>
                   <TableCell className="text-center py-4">
-                    <CheckmarkCircle02Icon className="w-5 h-5 text-green-600 mx-auto" />
+                    <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
                   </TableCell>
                   <TableCell className="text-center py-4">
-                    <CheckmarkCircle02Icon className="w-5 h-5 text-green-600 mx-auto" />
+                    <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
                   </TableCell>
                 </TableRow>
                 <TableRow>
@@ -237,7 +241,7 @@ export function Home({ onCreate, onJoin }: HomeProps) {
                     <Cancel01Icon className="w-5 h-5 text-destructive mx-auto" />
                   </TableCell>
                   <TableCell className="text-center py-4">
-                    <CheckmarkCircle02Icon className="w-5 h-5 text-green-600 mx-auto" />
+                    <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
                   </TableCell>
                 </TableRow>
                 <TableRow className="border-b-0">
@@ -248,7 +252,7 @@ export function Home({ onCreate, onJoin }: HomeProps) {
                     <Cancel01Icon className="w-5 h-5 text-destructive mx-auto" />
                   </TableCell>
                   <TableCell className="text-center py-4">
-                    <CheckmarkCircle02Icon className="w-5 h-5 text-green-600 mx-auto" />
+                    <CheckmarkCircle02Icon className="w-5 h-5 text-[hsl(var(--answer-blue))] mx-auto" />
                   </TableCell>
                 </TableRow>
               </TableBody>

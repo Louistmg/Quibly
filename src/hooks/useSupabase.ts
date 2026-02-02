@@ -63,10 +63,11 @@ export function useSupabase() {
 
   const createQuiz = useCallback(async (title: string, description: string, questions: { text: string; time_limit: number; points: number; answers: { text: string; is_correct: boolean; color: 'red' | 'blue' | 'yellow' | 'green' }[] }[]) => {
     setLoading(true)
+    let quiz: Quiz | null = null
+    const insertedQuestionIds: string[] = []
     try {
       const hostId = await ensureAuth()
       const maxAttempts = 5
-      let quiz: Quiz | null = null
       let lastError: unknown = null
 
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -107,6 +108,7 @@ export function useSupabase() {
           .single()
 
         if (questionError) throw questionError
+        insertedQuestionIds.push(question.id)
 
         const answersToInsert = q.answers.map((a, idx) => ({
           question_id: question.id,
@@ -125,6 +127,26 @@ export function useSupabase() {
 
       return quiz
     } catch (err) {
+      if (quiz?.id) {
+        try {
+          if (insertedQuestionIds.length > 0) {
+            await supabase
+              .from('answers')
+              .delete()
+              .in('question_id', insertedQuestionIds)
+            await supabase
+              .from('questions')
+              .delete()
+              .in('id', insertedQuestionIds)
+          }
+          await supabase
+            .from('quizzes')
+            .delete()
+            .eq('id', quiz.id)
+        } catch (cleanupError) {
+          console.error('Erreur lors du nettoyage du quiz incomplet :', cleanupError)
+        }
+      }
       setError(err instanceof Error ? err : new Error('Unknown error'))
       throw err
     } finally {
