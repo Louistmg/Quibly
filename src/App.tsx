@@ -126,31 +126,51 @@ function App() {
   
   const { createQuiz, createGameSession, joinGame, updateSessionState, getQuizByCode, getWaitingSessionByCode, getSessionById, getPlayerById, getPlayerBySession, removePlayer, deleteGameSession, subscribeToGameSession, ensureAuth, loading, error } = useSupabase()
 
-  const clearActiveSession = useCallback(() => {
+  const resetSessionState = useCallback(() => {
     clearStoredSession()
     setCurrentQuiz(null)
     setCurrentSession(null)
     setCurrentPlayer(null)
     setIsHost(false)
-    setPhase('home')
+    setPrefillJoinCode(null)
   }, [])
 
+  const clearActiveSession = useCallback(() => {
+    resetSessionState()
+    setPhase('home')
+  }, [resetSessionState])
+
   const handleQuit = useCallback(async () => {
-    if (isHost && currentSession?.id) {
+    const sessionId = currentSession?.id
+    const playerId = currentPlayer?.id
+    const isCurrentHost = isHost
+
+    clearActiveSession()
+
+    if (isCurrentHost && sessionId) {
       try {
-        await deleteGameSession(currentSession.id)
+        await deleteGameSession(sessionId)
       } catch (err) {
         console.error('Erreur lors de la suppression de la partie :', err)
       }
-    } else if (currentPlayer?.id) {
+    } else if (playerId) {
       try {
-        await removePlayer(currentPlayer.id)
+        await removePlayer(playerId)
       } catch (err) {
         console.error('Erreur lors de la suppression du joueur :', err)
       }
     }
-    clearActiveSession()
   }, [clearActiveSession, currentPlayer?.id, currentSession?.id, deleteGameSession, isHost, removePlayer])
+
+  const handleStartCreate = useCallback(() => {
+    resetSessionState()
+    setPhase('create')
+  }, [resetSessionState])
+
+  const handleStartJoin = useCallback(() => {
+    resetSessionState()
+    setPhase('join')
+  }, [resetSessionState])
 
   useEffect(() => {
     ensureAuth().catch((err: unknown) => {
@@ -468,8 +488,8 @@ function App() {
       case 'home':
         return (
           <Home
-            onCreate={() => setPhase('create')}
-            onJoin={() => setPhase('join')}
+            onCreate={handleStartCreate}
+            onJoin={handleStartJoin}
           />
         )
       case 'create':

@@ -79,7 +79,9 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
 
   const loadAnswerStats = useCallback(async () => {
     if (!session?.id || !currentQuestion) return
-    setIsLoadingStats(true)
+    if (!answerStats) {
+      setIsLoadingStats(true)
+    }
     try {
       const stats = await getAnswerStats(session.id, currentQuestion.id)
       setAnswerStats(stats)
@@ -88,7 +90,7 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
     } finally {
       setIsLoadingStats(false)
     }
-  }, [currentQuestion, getAnswerStats, session?.id])
+  }, [answerStats, currentQuestion, getAnswerStats, session?.id])
 
   useEffect(() => {
     void loadPlayers()
@@ -251,7 +253,7 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
               <CardTitle className="text-lg font-medium">Répartition des réponses</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {isLoadingStats ? (
+              {isLoadingStats && !answerStats ? (
                 <p className="text-sm text-muted-foreground">Chargement des réponses...</p>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

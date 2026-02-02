@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { StopWatchIcon, CrownIcon, Tick02Icon, Cancel02Icon, ArrowLeft01Icon } from 'hugeicons-react'
 import { GameSession, Quiz, Player, Question, Answer } from '@/types'
+import type { Player as DbPlayer } from '@/lib/supabase'
 import { useSupabase } from '@/hooks/useSupabase'
 import { Button as CustomButton } from '@/components/ui/custom-button'
 
@@ -9,6 +10,13 @@ interface PlayGameProps {
   quiz: Quiz | null
   player: Player | null
   onQuit: () => void
+}
+
+type ScoreboardPlayer = {
+  id: string
+  name: string
+  score: number
+  isHost: boolean
 }
 
 const getAnswerColorClass = (_: Answer['color'], selected: boolean, showCorrect: boolean, isCorrect: boolean) => {
@@ -44,12 +52,16 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
   const [answerResult, setAnswerResult] = useState<{ isCorrect: boolean; pointsEarned: number; correctAnswerId: string | null } | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
-  const { submitAnswer, getAnswerStats } = useSupabase()
+  const [scoreboardPlayers, setScoreboardPlayers] = useState<ScoreboardPlayer[]>([])
+  const [isLoadingScoreboard, setIsLoadingScoreboard] = useState(false)
+  const { submitAnswer, getAnswerStats, getPlayers, subscribeToSession } = useSupabase()
 
   const currentQuestionIndex = session?.currentQuestionIndex ?? 0
   const currentQuestion: Question | undefined = quiz?.questions[currentQuestionIndex]
   const phase = session?.phase ?? 'question'
-  const showResult = phase === 'results' || phase === 'scoreboard'
+  const showResult = phase === 'results'
+  const isScoreboardPhase = phase === 'scoreboard'
+  const isQuestionPhase = phase === 'question'
   
   const [timeRemaining, setTimeRemaining] = useState(() => currentQuestion?.timeLimit ?? 0)
   const hasSubmittedRef = useRef(false)
@@ -92,17 +104,17 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
   }, [player?.id, player?.score, player])
 
   useEffect(() => {
-    if (!currentQuestion || phase !== 'question') return
+    if (!currentQuestion || !isQuestionPhase) return
     hasSubmittedRef.current = false
     setSelectedAnswer(null)
     setAnswerResult(null)
     setSubmissionError(null)
     setTimeRemaining(currentQuestion.timeLimit)
     setServerCorrectAnswerId(null)
-  }, [currentQuestion, phase])
+  }, [currentQuestion, isQuestionPhase])
 
   useEffect(() => {
-    if (!currentQuestion || phase !== 'question') return
+    if (!currentQuestion || !isQuestionPhase) return
     const startTime = session?.questionStartedAt ?? session?.updatedAt ?? new Date()
     const tick = () => {
       const elapsedSeconds = Math.floor((Date.now() - startTime.getTime()) / 1000)
@@ -112,10 +124,10 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
     tick()
     const interval = setInterval(tick, 500)
     return () => clearInterval(interval)
-  }, [currentQuestion, phase, session?.questionStartedAt, session?.updatedAt])
+  }, [currentQuestion, isQuestionPhase, session?.questionStartedAt, session?.updatedAt])
 
   useEffect(() => {
-    if (!currentQuestion || phase !== 'question' || hasSubmittedRef.current) return
+    if (!currentQuestion || !isQuestionPhase || hasSubmittedRef.current) return
     if (!session?.questionStartedAt) return
     const startTime = new Date(session.questionStartedAt)
     const elapsedMs = Date.now() - startTime.getTime()
@@ -123,7 +135,7 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
     if (timeRemaining === 0) {
       void handleAnswer(null)
     }
-  }, [currentQuestion, phase, handleAnswer, session?.questionStartedAt, timeRemaining])
+  }, [currentQuestion, handleAnswer, isQuestionPhase, session?.questionStartedAt, timeRemaining])
 
   useEffect(() => {
     if (!session?.id || !currentQuestion) return
@@ -139,15 +151,60 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
     })()
   }, [answerResult?.correctAnswerId, currentQuestion, getAnswerStats, serverCorrectAnswerId, session?.id, showResult])
 
-  if (!currentQuestion) return null
+  const mapDbPlayers = useCallback((dbPlayers: DbPlayer[]): ScoreboardPlayer[] => {
+    return dbPlayers.map((p) => ({
+      id: p.id,
+      name: p.name,
+      score: p.score,
+      isHost: p.is_host,
+    }))
+  }, [])
+
+  const loadScoreboard = useCallback(async () => {
+    if (!session?.id) return
+    setIsLoadingScoreboard(true)
+    try {
+      const data = await getPlayers(session.id)
+      setScoreboardPlayers(mapDbPlayers(data))
+    } catch (err) {
+      console.error('Erreur lors du chargement du classement :', err)
+    } finally {
+      setIsLoadingScoreboard(false)
+    }
+  }, [getPlayers, mapDbPlayers, session?.id])
+
+  useEffect(() => {
+    if (!isScoreboardPhase) return
+    void loadScoreboard()
+  }, [isScoreboardPhase, loadScoreboard])
+
+  useEffect(() => {
+    if (!session?.id || !isScoreboardPhase) return
+    const unsubscribe = subscribeToSession(session.id, () => {
+      void loadScoreboard()
+    })
+    return unsubscribe
+  }, [isScoreboardPhase, loadScoreboard, session?.id, subscribeToSession])
 
   const resolvedCorrectAnswerId = answerResult?.correctAnswerId ?? serverCorrectAnswerId
-  const canAnswer = phase === 'question'
+  const canAnswer = isQuestionPhase
   const hasSelectedAnswer = Boolean(selectedAnswer)
+  const isWaitingForResults = isQuestionPhase && hasSelectedAnswer
   const isAnswerCorrect = resolvedCorrectAnswerId
     ? selectedAnswer === resolvedCorrectAnswerId
     : (answerResult?.isCorrect ?? false)
   const pointsEarned = answerResult?.pointsEarned ?? 0
+  const rankedPlayers = useMemo(() => {
+    return scoreboardPlayers
+      .filter((p) => !p.isHost)
+      .sort((a, b) => b.score - a.score)
+      .map((p, index) => ({
+        ...p,
+        rank: index + 1,
+      }))
+  }, [scoreboardPlayers])
+
+  if (!currentQuestion) return null
 
   return (
     <div className="min-h-screen bg-[#1a1a2e] text-white p-4">
@@ -181,72 +238,89 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
         </div>
       </div>
 
-      {/* Timer */}
-      <div className="mb-8">
-        <div className="flex items-center justify-center gap-3 mb-3">
-          <StopWatchIcon className="w-6 h-6" />
-          <span className={`text-3xl font-medium ${timeRemaining <= 5 ? 'text-[hsl(var(--answer-red))]' : ''}`}>
-            {timeRemaining}s
-          </span>
-        </div>
-        <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-1000 ${
-              timeRemaining <= 5 ? 'bg-[hsl(var(--answer-red))]' : 'bg-[hsl(var(--answer-green))]'
-            }`}
-            style={{ width: `${(timeRemaining / currentQuestion.timeLimit) * 100}%` }}
-          />
-        </div>
-      </div>
+      {!isScoreboardPhase && (
+        <>
+          {/* Timer */}
+          <div className="mb-8">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <StopWatchIcon className="w-6 h-6" />
+              <span className={`text-3xl font-medium ${timeRemaining <= 5 ? 'text-[hsl(var(--answer-red))]' : ''}`}>
+                {timeRemaining}s
+              </span>
+            </div>
+            <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-1000 ${
+                  timeRemaining <= 5 ? 'bg-[hsl(var(--answer-red))]' : 'bg-[hsl(var(--answer-green))]'
+                }`}
+                style={{ width: `${(timeRemaining / currentQuestion.timeLimit) * 100}%` }}
+              />
+            </div>
+          </div>
 
-      {/* Question */}
-      <div className="text-center mb-10">
-        <h2 className="text-3xl md:text-4xl font-medium leading-tight">
-          {currentQuestion.text}
-        </h2>
-      </div>
+          {/* Question */}
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-medium leading-tight">
+              {currentQuestion.text}
+            </h2>
+          </div>
+        </>
+      )}
 
-      {/* Answers Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
-        {currentQuestion.answers.map((answer) => {
-          const isSelected = selectedAnswer === answer.id
-          const isCorrect = resolvedCorrectAnswerId === answer.id
-          const canShowCorrect = showResult && resolvedCorrectAnswerId !== null
-          
-          return (
-            <button
-              key={answer.id}
-              onClick={() => canAnswer && handleAnswer(answer.id)}
-              disabled={!canAnswer}
-              className={`
-                relative h-28 sm:h-32 md:h-40 rounded-2xl font-medium text-lg sm:text-xl md:text-2xl
-                transition-all duration-300 transform hover:scale-105
-                ${getAnswerBgClass(answer.color)}
-                ${getAnswerShape(answer.color)}
-                ${getAnswerColorClass(answer.color, isSelected, canShowCorrect, isCorrect)}
-                ${canAnswer ? 'cursor-pointer shadow-lg hover:shadow-xl' : 'cursor-default'}
-              `}
-            >
-              <span className="relative z-10 px-4">{answer.text}</span>
-              
-              {showResult && isCorrect && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Tick02Icon className="w-12 h-12 text-white/80" />
-                </div>
-              )}
-              
-              {showResult && isSelected && !isCorrect && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-2xl">
-                  <Cancel02Icon className="w-12 h-12 text-white/80" />
-                </div>
-              )}
-            </button>
-          )
-        })}
-      </div>
+      {!isScoreboardPhase && (
+        <>
+          {/* Answers Grid */}
+          {isWaitingForResults ? (
+            <div className="max-w-3xl mx-auto">
+              <div className="flex flex-col items-center justify-center gap-5 rounded-2xl border border-white/10 bg-white/5 py-16">
+                <div className="h-10 w-10 rounded-full border-4 border-white/20 border-t-white animate-spin" />
+                <p className="text-lg font-medium text-white/90">En attente de la réponse</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
+              {currentQuestion.answers.map((answer) => {
+                const isSelected = selectedAnswer === answer.id
+                const isCorrect = resolvedCorrectAnswerId === answer.id
+                const canShowCorrect = showResult && resolvedCorrectAnswerId !== null
+                
+                return (
+                  <button
+                    key={answer.id}
+                    onClick={() => canAnswer && handleAnswer(answer.id)}
+                    disabled={!canAnswer}
+                    className={`
+                      relative h-28 sm:h-32 md:h-40 rounded-2xl font-medium text-lg sm:text-xl md:text-2xl
+                      transition-all duration-300 transform hover:scale-105
+                      ${getAnswerBgClass(answer.color)}
+                      ${getAnswerShape(answer.color)}
+                      ${getAnswerColorClass(answer.color, isSelected, canShowCorrect, isCorrect)}
+                      ${canAnswer ? 'cursor-pointer shadow-lg hover:shadow-xl' : 'cursor-default'}
+                    `}
+                  >
+                    <span className="relative z-10 px-4">{answer.text}</span>
+                    
+                    {showResult && isCorrect && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Tick02Icon className="w-12 h-12 text-white/80" />
+                      </div>
+                    )}
+                    
+                    {showResult && isSelected && !isCorrect && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-2xl">
+                        <Cancel02Icon className="w-12 h-12 text-white/80" />
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </>
+      )}
 
       {/* Result Message */}
-      {showResult && (
+      {showResult && !isScoreboardPhase && (
         <div className="text-center mt-8 space-y-4">
           {submissionError ? (
             <div className="inline-flex items-center gap-2 bg-destructive/10 text-destructive px-6 py-3 rounded-full font-medium text-lg">
@@ -270,6 +344,50 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
             </div>
           )}
 
+        </div>
+      )}
+
+      {isScoreboardPhase && (
+        <div className="max-w-3xl mx-auto mt-6 space-y-6">
+          <div className="text-center space-y-2">
+            <h2 className="text-3xl md:text-4xl font-medium">Classement provisoire</h2>
+          </div>
+          {isLoadingScoreboard ? (
+            <div className="text-center text-sm text-white/60">Chargement du classement...</div>
+          ) : rankedPlayers.length === 0 ? (
+            <div className="text-center text-sm text-white/60">Aucun joueur pour le moment.</div>
+          ) : (
+            <div className="space-y-3">
+              {rankedPlayers.map((rankedPlayer) => {
+                const isCurrentPlayer = rankedPlayer.id === player?.id
+                return (
+                  <div
+                    key={rankedPlayer.id}
+                    className={`
+                      flex items-center justify-between gap-4 rounded-2xl border px-4 py-3
+                      ${isCurrentPlayer ? 'border-white/40 bg-white/10' : 'border-white/10 bg-white/5'}
+                    `}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center font-medium">
+                        #{rankedPlayer.rank}
+                      </div>
+                      <div>
+                        <p className="font-medium text-white">{rankedPlayer.name}</p>
+                        {isCurrentPlayer && (
+                          <p className="text-xs text-white/60">Vous</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-medium text-white">{rankedPlayer.score}</p>
+                      <p className="text-xs text-white/60">pts</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
