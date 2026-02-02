@@ -1,15 +1,13 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { StopWatchIcon, CrownIcon, Tick02Icon, Cancel02Icon, ArrowLeft01Icon } from 'hugeicons-react'
+import { StopWatchIcon, CrownIcon, Tick02Icon, Cancel02Icon } from 'hugeicons-react'
 import { GameSession, Quiz, Player, Question, Answer } from '@/types'
 import type { Player as DbPlayer } from '@/lib/supabase'
 import { useSupabase } from '@/hooks/useSupabase'
-import { Button as CustomButton } from '@/components/ui/custom-button'
 
 interface PlayGameProps {
   session: GameSession | null
   quiz: Quiz | null
   player: Player | null
-  onQuit: () => void
 }
 
 type ScoreboardPlayer = {
@@ -46,7 +44,7 @@ const getAnswerShape = (color: Answer['color']) => {
   }
 }
 
-export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
+export function PlayGame({ session, quiz, player }: PlayGameProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [score, setScore] = useState(() => player?.score ?? 0)
   const [answerResult, setAnswerResult] = useState<{ isCorrect: boolean; pointsEarned: number; correctAnswerId: string | null } | null>(null)
@@ -208,15 +206,6 @@ export function PlayGame({ session, quiz, player, onQuit }: PlayGameProps) {
 
   return (
     <div className="min-h-screen bg-[#1a1a2e] text-white p-4">
-      <div className="flex justify-end mb-6">
-        <CustomButton
-          variant="secondary"
-          onClick={onQuit}
-          icon={<ArrowLeft01Icon className="w-4 h-4" />}
-        >
-          Quitter la partie
-        </CustomButton>
-      </div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3 justify-center sm:justify-start w-full sm:w-auto">

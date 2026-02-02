@@ -543,7 +543,6 @@ function App() {
             session={currentSession}
             quiz={currentQuiz}
             player={currentPlayer}
-            onQuit={handleQuit}
           />
         )
       case 'results':
