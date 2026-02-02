@@ -389,7 +389,7 @@ export function useSupabase() {
     return data as AdvanceSessionPhaseResult
   }, [ensureAuth])
 
-  const subscribeToSession = useCallback((sessionId: string, callback: (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => void) => {
+  const subscribeToSession = useCallback((sessionId: string, callback: (payload: { eventType?: string; new?: Record<string, unknown>; old?: Record<string, unknown> }) => void) => {
     let subscription: ReturnType<typeof supabase.channel> | null = null
     let isClosed = false
 
@@ -398,18 +398,30 @@ export function useSupabase() {
         await ensureAuth()
         if (isClosed) return
         subscription = supabase
-          .channel(`session:${sessionId}`)
+          .channel(`session:${sessionId}`, {
+            config: {
+              broadcast: { ack: false },
+            },
+          })
           .on('postgres_changes', {
             event: '*',
             schema: 'public',
             table: 'game_sessions',
             filter: `id=eq.${sessionId}`
           }, callback)
+          .on('broadcast', { event: 'players-changed' }, () => {
+            callback({ eventType: 'broadcast' })
+          })
           .on('postgres_changes', {
             event: '*',
             schema: 'public',
             table: 'players',
             filter: `session_id=eq.${sessionId}`
+          }, callback)
+          .on('postgres_changes', {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'players'
           }, callback)
           .subscribe()
       } catch (err) {
@@ -422,6 +434,38 @@ export function useSupabase() {
     return () => {
       isClosed = true
       subscription?.unsubscribe()
+    }
+  }, [ensureAuth])
+
+  const notifyPlayersChanged = useCallback(async (sessionId: string) => {
+    try {
+      await ensureAuth()
+      const channel = supabase.channel(`session:${sessionId}`, {
+        config: {
+          broadcast: { ack: false },
+        },
+      })
+      const subscribed = await new Promise<boolean>((resolve) => {
+        channel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') resolve(true)
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') resolve(false)
+        })
+      })
+
+      if (!subscribed) {
+        await channel.unsubscribe()
+        return
+      }
+
+      await channel.send({
+        type: 'broadcast',
+        event: 'players-changed',
+        payload: { sessionId, emittedAt: new Date().toISOString() },
+      })
+
+      await channel.unsubscribe()
+    } catch (err) {
+      console.error('Realtime broadcast failed:', err)
     }
   }, [ensureAuth])
 
@@ -486,6 +530,7 @@ export function useSupabase() {
     removePlayer,
     deleteGameSession,
     subscribeToSession,
-    subscribeToGameSession
+    subscribeToGameSession,
+    notifyPlayersChanged
   }
 }

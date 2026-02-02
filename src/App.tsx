@@ -130,7 +130,7 @@ function App() {
   const [isHost, setIsHost] = useState(false)
   const [prefillJoinCode, setPrefillJoinCode] = useState<string | null>(null)
   
-  const { createQuiz, createGameSession, joinGame, updateSessionState, getQuizByCode, getWaitingSessionByCode, getSessionById, getPlayerById, getPlayerBySession, removePlayer, deleteGameSession, subscribeToGameSession, ensureAuth, loading, error } = useSupabase()
+  const { createQuiz, createGameSession, joinGame, updateSessionState, getQuizByCode, getWaitingSessionByCode, getSessionById, getPlayerById, getPlayerBySession, removePlayer, deleteGameSession, subscribeToGameSession, notifyPlayersChanged, ensureAuth, loading, error } = useSupabase()
 
   const resetSessionState = useCallback(() => {
     clearStoredSession()
@@ -162,11 +162,14 @@ function App() {
     } else if (playerId) {
       try {
         await removePlayer(playerId)
+        if (sessionId) {
+          await notifyPlayersChanged(sessionId)
+        }
       } catch (err) {
         console.error('Erreur lors de la suppression du joueur :', err)
       }
     }
-  }, [clearActiveSession, currentPlayer?.id, currentSession?.id, deleteGameSession, isHost, removePlayer])
+  }, [clearActiveSession, currentPlayer?.id, currentSession?.id, deleteGameSession, isHost, notifyPlayersChanged, removePlayer])
 
   const handleStartCreate = useCallback(() => {
     resetSessionState()
