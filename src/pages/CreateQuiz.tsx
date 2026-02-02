@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Button as CustomButton } from '@/components/ui/custom-button'
 import { Input } from '@/components/ui/input'
@@ -136,6 +136,7 @@ const clearDraft = () => {
 
 export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
   const initialDraft = useMemo(() => readDraft(), [])
+  const answerInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   const [currentStep, setCurrentStep] = useState<Step>(() =>
     isStep(initialDraft?.currentStep) ? initialDraft.currentStep : 1
@@ -255,6 +256,14 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
 
   const handleSetCorrectAnswer = (id: string) => {
     setCurrentAnswers((prev) => prev.map((answer) => ({ ...answer, isCorrect: answer.id === id })))
+  }
+
+  const focusAnswerInput = (id: string) => {
+    const input = answerInputRefs.current[id]
+    if (input) {
+      input.focus()
+      input.select()
+    }
   }
 
   const handleSaveQuestion = () => {
@@ -517,6 +526,7 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
                           ? 'border-[hsl(var(--answer-green))] bg-[hsl(var(--answer-green))]/5'
                           : 'border-border bg-background hover:border-foreground/30'
                       )}
+                      onClick={() => focusAnswerInput(answer.id)}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -526,6 +536,7 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
                         <button
                           type="button"
                           onClick={() => handleSetCorrectAnswer(answer.id)}
+                          onMouseDown={(event) => event.stopPropagation()}
                           className={cn(
                             'inline-flex h-8 w-8 items-center justify-center rounded-md border text-xs font-medium transition',
                             answer.isCorrect
@@ -546,6 +557,9 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
                           'border-border focus-visible:ring-foreground',
                           answer.isCorrect && 'border-[hsl(var(--answer-green))]'
                         )}
+                        ref={(node) => {
+                          answerInputRefs.current[answer.id] = node
+                        }}
                       />
                     </div>
                   ))}
