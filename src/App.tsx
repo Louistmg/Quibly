@@ -1,12 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { GamePhase, Quiz, GameSession, Player } from '@/types'
-import { Home } from '@/pages/Home'
-import { CreateQuiz } from '@/pages/CreateQuiz'
-import { JoinGame } from '@/pages/JoinGame'
-import { GameLobby } from '@/pages/GameLobby'
-import { HostGame } from '@/pages/HostGame'
-import { PlayGame } from '@/pages/PlayGame'
-import { Results } from '@/pages/Results'
 import { useSupabase } from '@/hooks/useSupabase'
 import type { Quiz as DbQuiz, Question as DbQuestion, PublicAnswer as DbPublicAnswer, GameSession as DbGameSession, Player as DbPlayer } from '@/lib/supabase'
 import './App.css'
@@ -19,6 +12,14 @@ type StoredSession = {
   role: 'host' | 'player'
   playerId?: string
 }
+
+const Home = lazy(() => import('@/pages/Home').then((module) => ({ default: module.Home })))
+const CreateQuiz = lazy(() => import('@/pages/CreateQuiz').then((module) => ({ default: module.CreateQuiz })))
+const JoinGame = lazy(() => import('@/pages/JoinGame').then((module) => ({ default: module.JoinGame })))
+const GameLobby = lazy(() => import('@/pages/GameLobby').then((module) => ({ default: module.GameLobby })))
+const HostGame = lazy(() => import('@/pages/HostGame').then((module) => ({ default: module.HostGame })))
+const PlayGame = lazy(() => import('@/pages/PlayGame').then((module) => ({ default: module.PlayGame })))
+const Results = lazy(() => import('@/pages/Results').then((module) => ({ default: module.Results })))
 
 const ACTIVE_SESSION_KEY = 'quibly:active-session'
 
@@ -531,7 +532,15 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      {renderPhase()}
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">
+            Chargement...
+          </div>
+        }
+      >
+        {renderPhase()}
+      </Suspense>
     </div>
   )
 }
