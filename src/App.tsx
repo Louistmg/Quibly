@@ -545,8 +545,15 @@ function App() {
         }
       }
 
+      const isIos = /iP(hone|od|ad)/.test(window.navigator.userAgent)
+        || (window.navigator.userAgent.includes('Mac') && 'ontouchend' in document)
+
+      if (isIos) {
+        await new Promise((resolve) => window.setTimeout(resolve, 400))
+      }
+
       setPhase('lobby')
-      scheduleScrollToTop({ withViewportGuard: true })
+      scheduleScrollToTop({ withViewportGuard: true, guardMs: 3000 })
     } catch (err) {
       console.error('Error joining game:', err)
       alert('Erreur lors de la connexion à la partie. Veuillez vérifier le code.')

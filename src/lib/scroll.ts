@@ -31,7 +31,7 @@ export const scheduleScrollToTop = (options: ScheduleOptions = {}) => {
   fire()
   rafs.push(window.requestAnimationFrame(fire))
 
-  ;[100, 350, 900, 1600].forEach((delay) => {
+  ;[100, 350, 600, 900, 1200, 1600, 2200].forEach((delay) => {
     timeouts.push(window.setTimeout(fire, delay))
   })
 
