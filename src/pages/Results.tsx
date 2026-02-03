@@ -4,24 +4,11 @@ import { Button as CustomButton } from '@/components/ui/custom-button'
 import type { GameSession, Player as UiPlayer } from '@/types'
 import type { Player as DbPlayer } from '@/lib/supabase'
 import { useSupabase } from '@/hooks/useSupabase'
-import { CrownIcon, Medal01Icon, ArrowLeft01Icon } from 'hugeicons-react'
+import { ArrowLeft01Icon } from 'hugeicons-react'
 
 interface ResultsProps {
   session: GameSession | null
   onBack: () => void
-}
-
-const getRankIcon = (rank: number) => {
-  switch (rank) {
-    case 1:
-      return <CrownIcon className="w-7 h-7 text-[hsl(var(--answer-yellow))]" />
-    case 2:
-      return <Medal01Icon className="w-7 h-7 text-muted-foreground" />
-    case 3:
-      return <Medal01Icon className="w-7 h-7 text-muted-foreground" />
-    default:
-      return <span className="text-lg font-medium text-muted-foreground">#{rank}</span>
-  }
 }
 
 const getRankStyle = (rank: number) => {
@@ -194,21 +181,11 @@ export function Results({ session, onBack }: ResultsProps) {
               rankedPlayers.map((player) => (
                 <div
                   key={player.id}
-                  className={`flex items-center justify-between p-4 rounded-xl border ${getRankStyle(player.rank)}`}
+                  className="flex items-center justify-between p-4 rounded-xl border border-border"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 flex justify-center">
-                      {getRankIcon(player.rank)}
-                    </div>
-                    <div className={`w-11 h-11 rounded-full flex items-center justify-center font-medium ${getRankBadgeStyle(player.rank)}`}>
-                      {(player.name?.[0] ?? '?').toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">{player.name}</p>
-                      {player.rank === 1 && (
-                        <p className="text-sm text-[hsl(var(--answer-yellow))]">Gagnant</p>
-                      )}
-                    </div>
+                    <div className="text-sm font-medium text-foreground">#{player.rank}</div>
+                    <p className="font-medium text-foreground">{player.name}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-medium text-foreground">{player.score}</p>

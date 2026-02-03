@@ -354,9 +354,6 @@ export function PlayGame({ session, quiz, player }: PlayGameProps) {
                       </div>
                       <div>
                         <p className="font-medium text-white">{rankedPlayer.name}</p>
-                        {isCurrentPlayer && (
-                          <p className="text-xs text-white/60">Vous</p>
-                        )}
                       </div>
                     </div>
                     <div className="text-right">
