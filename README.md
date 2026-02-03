@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/logo.png" alt="Quibly" width="240" />
+</p>
+
 # Quibly
 
 Quibly est une alternative open source à Kahoot pour créer et animer des quiz en direct. Simple à lancer, pensé pour les classes, ateliers et événements.
