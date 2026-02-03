@@ -154,7 +154,7 @@ function App() {
 
     clearActiveSession()
 
-    if (isFinished) return
+    if (!isCurrentHost && isFinished) return
 
     if (isCurrentHost && sessionId) {
       try {
