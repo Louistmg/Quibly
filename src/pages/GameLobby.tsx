@@ -6,6 +6,7 @@ import type { Player as DbPlayer } from '@/lib/supabase'
 import { useSupabase } from '@/hooks/useSupabase'
 import { ArrowLeft01Icon, UserGroupIcon, PlayIcon, Copy01Icon, Tick02Icon } from 'hugeicons-react'
 import { toDataURL } from 'qrcode'
+import { scheduleScrollToTop } from '@/lib/scroll'
 
 interface GameLobbyProps {
   session: GameSession | null
@@ -54,44 +55,7 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
   }, [loadPlayers])
 
   useLayoutEffect(() => {
-    if (typeof window === 'undefined') return
-    const isIos = /iP(hone|od|ad)/.test(window.navigator.userAgent)
-      || (window.navigator.userAgent.includes('Mac') && 'ontouchend' in document)
-    const scrollToTop = () => {
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-      document.documentElement.scrollTop = 0
-      document.body.scrollTop = 0
-    }
-    scrollToTop()
-    const frame = window.requestAnimationFrame(scrollToTop)
-    const timeout = window.setTimeout(scrollToTop, 120)
-    const longerTimeout = window.setTimeout(scrollToTop, 800)
-    const viewport = window.visualViewport
-    let guardTimeout: number | null = null
-    const handleViewportChange = () => scrollToTop()
-    if (isIos && viewport) {
-      viewport.addEventListener('resize', handleViewportChange)
-      viewport.addEventListener('scroll', handleViewportChange)
-      window.addEventListener('orientationchange', handleViewportChange)
-      guardTimeout = window.setTimeout(() => {
-        viewport.removeEventListener('resize', handleViewportChange)
-        viewport.removeEventListener('scroll', handleViewportChange)
-        window.removeEventListener('orientationchange', handleViewportChange)
-      }, 1500)
-    }
-    return () => {
-      window.cancelAnimationFrame(frame)
-      window.clearTimeout(timeout)
-      window.clearTimeout(longerTimeout)
-      if (guardTimeout) {
-        window.clearTimeout(guardTimeout)
-      }
-      if (isIos && viewport) {
-        viewport.removeEventListener('resize', handleViewportChange)
-        viewport.removeEventListener('scroll', handleViewportChange)
-        window.removeEventListener('orientationchange', handleViewportChange)
-      }
-    }
+    return scheduleScrollToTop({ withViewportGuard: true })
   }, [session?.id])
 
   useEffect(() => {

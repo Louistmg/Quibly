@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useState } fro
 import { GamePhase, Quiz, GameSession, Player } from '@/types'
 import { useSupabase } from '@/hooks/useSupabase'
 import type { Quiz as DbQuiz, Question as DbQuestion, PublicAnswer as DbPublicAnswer, GameSession as DbGameSession, Player as DbPlayer } from '@/lib/supabase'
+import { scheduleScrollToTop } from '@/lib/scroll'
 import './App.css'
 
 type PublicQuizPayload = DbQuiz & { questions: (DbQuestion & { answers: DbPublicAnswer[] })[] }
@@ -536,8 +537,16 @@ function App() {
         quizCode: session.code,
         role: 'player',
       })
-      
+
+      if (typeof document !== 'undefined') {
+        const activeElement = document.activeElement
+        if (activeElement instanceof HTMLElement) {
+          activeElement.blur()
+        }
+      }
+
       setPhase('lobby')
+      scheduleScrollToTop({ withViewportGuard: true })
     } catch (err) {
       console.error('Error joining game:', err)
       alert('Erreur lors de la connexion à la partie. Veuillez vérifier le code.')
