@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import type { PlayerAnswerRecord } from '@/lib/streaks'
 import { supabase, type Quiz, type Question, type PublicAnswer, type GameSession, type Player } from '@/lib/supabase'
 
 type PublicQuiz = Quiz & { questions: (Question & { answers: PublicAnswer[] })[] }
@@ -23,6 +24,13 @@ type AdvanceSessionPhaseResult = {
   total_players?: number
   total_answers?: number
   reason?: string
+}
+
+type DbPlayerAnswer = {
+  player_id: string
+  question_id: string
+  is_correct: boolean
+  answered_at: string
 }
 
 const QUIZ_CODE_LENGTH = 6
@@ -379,6 +387,26 @@ export function useSupabase() {
     return data as AnswerStats
   }, [ensureAuth])
 
+  const getPlayerAnswers = useCallback(async (playerIds: string[], questionIds: string[]) => {
+    await ensureAuth()
+    if (playerIds.length === 0 || questionIds.length === 0) return []
+    const { data, error } = await supabase
+      .from('player_answers')
+      .select('player_id, question_id, is_correct, answered_at')
+      .in('player_id', playerIds)
+      .in('question_id', questionIds)
+      .order('answered_at', { ascending: false })
+
+    if (error) throw error
+    const rows = (data ?? []) as DbPlayerAnswer[]
+    return rows.map((row) => ({
+      playerId: row.player_id,
+      questionId: row.question_id,
+      isCorrect: row.is_correct,
+      answeredAt: row.answered_at,
+    })) as PlayerAnswerRecord[]
+  }, [ensureAuth])
+
   const advanceSessionPhase = useCallback(async (sessionId: string) => {
     await ensureAuth()
     const { data, error } = await supabase.rpc('advance_session_phase', {
@@ -523,6 +551,7 @@ export function useSupabase() {
     submitAnswer,
     getWaitingSessionByCode,
     getAnswerStats,
+    getPlayerAnswers,
     advanceSessionPhase,
     getSessionById,
     getPlayerById,

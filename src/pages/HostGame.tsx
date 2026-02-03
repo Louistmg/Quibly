@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { StopWatchIcon, ArrowRight01Icon, Tick02Icon, ArrowLeft01Icon } from 'hugeicons-react'
+import { StopWatchIcon, ArrowRight01Icon, Tick02Icon, ArrowLeft01Icon, FireIcon } from 'hugeicons-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button as CustomButton } from '@/components/ui/custom-button'
 import type { GameSession, Player as UiPlayer, Quiz, Answer } from '@/types'
 import type { Player as DbPlayer } from '@/lib/supabase'
 import { useSupabase } from '@/hooks/useSupabase'
+import { computeStreaks } from '@/lib/streaks'
 
 type AnswerStat = {
   id: string
@@ -19,6 +20,8 @@ type AnswerStats = {
   correct_answer_id: string | null
   answers: AnswerStat[]
 }
+
+type PlayerWithStreak = UiPlayer & { streak: number }
 
 interface HostGameProps {
   session: GameSession | null
@@ -50,15 +53,15 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
   const currentQuestion = quiz?.questions[currentQuestionIndex]
   const isLastQuestion = currentQuestionIndex >= ((quiz?.questions.length ?? 1) - 1)
 
-  const [players, setPlayers] = useState<UiPlayer[]>([])
+  const [players, setPlayers] = useState<PlayerWithStreak[]>([])
   const [answerStats, setAnswerStats] = useState<(AnswerStats & { questionId: string }) | null>(null)
   const [timeRemaining, setTimeRemaining] = useState(() => currentQuestion?.timeLimit ?? 0)
   const [isLoadingStats, setIsLoadingStats] = useState(false)
   const [hasTimerStarted, setHasTimerStarted] = useState(false)
   const hasAutoAdvancedRef = useRef(false)
-  const { getPlayers, subscribeToSession, getAnswerStats, updateSessionState } = useSupabase()
+  const { getPlayers, subscribeToSession, getAnswerStats, updateSessionState, getPlayerAnswers } = useSupabase()
 
-  const mapDbPlayers = useCallback((dbPlayers: DbPlayer[]): UiPlayer[] => {
+  const mapDbPlayers = useCallback((dbPlayers: DbPlayer[]): PlayerWithStreak[] => {
     return dbPlayers.map((p) => ({
       id: p.id,
       name: p.name,
@@ -66,18 +69,37 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
       answers: [],
       isHost: p.is_host,
       userId: p.user_id ?? '',
+      streak: 0,
     }))
   }, [])
+
+  const scoreboardQuestionIds = useMemo(() => {
+    if (!quiz) return []
+    const endIndex = Math.min(currentQuestionIndex + 1, quiz.questions.length)
+    return quiz.questions.slice(0, endIndex).map((question) => question.id)
+  }, [currentQuestionIndex, quiz])
 
   const loadPlayers = useCallback(async () => {
     if (!session?.id) return
     try {
       const data = await getPlayers(session.id)
-      setPlayers(mapDbPlayers(data))
+      const mappedPlayers = mapDbPlayers(data)
+      let streaks: Record<string, number> = {}
+      if (phase === 'scoreboard' && mappedPlayers.length > 0 && scoreboardQuestionIds.length > 0) {
+        const playerIds = mappedPlayers.map((player) => player.id)
+        const answers = await getPlayerAnswers(playerIds, scoreboardQuestionIds)
+        streaks = computeStreaks(playerIds, scoreboardQuestionIds, answers)
+      }
+      setPlayers(
+        mappedPlayers.map((player) => ({
+          ...player,
+          streak: streaks[player.id] ?? 0,
+        }))
+      )
     } catch (err) {
       console.error('Erreur lors du chargement des joueurs :', err)
     }
-  }, [getPlayers, mapDbPlayers, session?.id])
+  }, [getPlayers, mapDbPlayers, session?.id, phase, getPlayerAnswers, scoreboardQuestionIds])
 
   const loadAnswerStats = useCallback(async () => {
     if (!session?.id || !currentQuestion) return
@@ -338,7 +360,19 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
                         </div>
                       </div>
                       <div className="text-left sm:text-right">
-                        <p className="text-lg font-medium text-foreground">{player.score}</p>
+                        <div className="flex items-center justify-start gap-2 sm:justify-end">
+                          <p className="text-lg font-medium text-foreground">{player.score}</p>
+                          {player.streak >= 2 && (
+                            <div className="flex items-center gap-1">
+                              <FireIcon className="w-4 h-4 text-[hsl(var(--answer-yellow))]" />
+                              {player.streak > 2 && (
+                                <span className="rounded-full bg-foreground/10 px-1.5 py-0.5 text-xs font-medium text-foreground/80">
+                                  {player.streak - 1}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">pts</p>
                       </div>
                     </div>

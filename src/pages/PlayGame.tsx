@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { StopWatchIcon, CrownIcon, Tick02Icon, Cancel02Icon } from 'hugeicons-react'
+import { StopWatchIcon, CrownIcon, Tick02Icon, Cancel02Icon, FireIcon } from 'hugeicons-react'
 import { GameSession, Quiz, Player, Question, Answer } from '@/types'
 import type { Player as DbPlayer } from '@/lib/supabase'
 import { useSupabase } from '@/hooks/useSupabase'
+import { computeStreaks } from '@/lib/streaks'
 
 interface PlayGameProps {
   session: GameSession | null
@@ -15,6 +16,7 @@ type ScoreboardPlayer = {
   name: string
   score: number
   isHost: boolean
+  streak: number
 }
 
 const getAnswerColorClass = (_: Answer['color'], selected: boolean, showCorrect: boolean, isCorrect: boolean) => {
@@ -52,7 +54,7 @@ export function PlayGame({ session, quiz, player }: PlayGameProps) {
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [scoreboardPlayers, setScoreboardPlayers] = useState<ScoreboardPlayer[]>([])
   const [isLoadingScoreboard, setIsLoadingScoreboard] = useState(false)
-  const { submitAnswer, getAnswerStats, getPlayers, subscribeToSession } = useSupabase()
+  const { submitAnswer, getAnswerStats, getPlayers, subscribeToSession, getPlayerAnswers } = useSupabase()
 
   const currentQuestionIndex = session?.currentQuestionIndex ?? 0
   const currentQuestion: Question | undefined = quiz?.questions[currentQuestionIndex]
@@ -155,21 +157,40 @@ export function PlayGame({ session, quiz, player }: PlayGameProps) {
       name: p.name,
       score: p.score,
       isHost: p.is_host,
+      streak: 0,
     }))
   }, [])
+
+  const scoreboardQuestionIds = useMemo(() => {
+    if (!quiz) return []
+    const endIndex = Math.min(currentQuestionIndex + 1, quiz.questions.length)
+    return quiz.questions.slice(0, endIndex).map((question) => question.id)
+  }, [currentQuestionIndex, quiz])
 
   const loadScoreboard = useCallback(async () => {
     if (!session?.id) return
     setIsLoadingScoreboard(true)
     try {
       const data = await getPlayers(session.id)
-      setScoreboardPlayers(mapDbPlayers(data))
+      const mappedPlayers = mapDbPlayers(data)
+      let streaks: Record<string, number> = {}
+      if (mappedPlayers.length > 0 && scoreboardQuestionIds.length > 0) {
+        const playerIds = mappedPlayers.map((p) => p.id)
+        const answers = await getPlayerAnswers(playerIds, scoreboardQuestionIds)
+        streaks = computeStreaks(playerIds, scoreboardQuestionIds, answers)
+      }
+      setScoreboardPlayers(
+        mappedPlayers.map((player) => ({
+          ...player,
+          streak: streaks[player.id] ?? 0,
+        }))
+      )
     } catch (err) {
       console.error('Erreur lors du chargement du classement :', err)
     } finally {
       setIsLoadingScoreboard(false)
     }
-  }, [getPlayers, mapDbPlayers, session?.id])
+  }, [getPlayers, mapDbPlayers, session?.id, getPlayerAnswers, scoreboardQuestionIds])
 
   useEffect(() => {
     if (!isScoreboardPhase) return
@@ -357,7 +378,19 @@ export function PlayGame({ session, quiz, player }: PlayGameProps) {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-medium text-white">{rankedPlayer.score}</p>
+                      <div className="flex items-center justify-end gap-2">
+                        <p className="text-lg font-medium text-white">{rankedPlayer.score}</p>
+                        {rankedPlayer.streak >= 2 && (
+                          <div className="flex items-center gap-1">
+                            <FireIcon className="w-4 h-4 text-[hsl(var(--answer-yellow))]" />
+                            {rankedPlayer.streak > 2 && (
+                              <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-xs font-medium text-white/80">
+                                {rankedPlayer.streak - 1}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       <p className="text-xs text-white/60">pts</p>
                     </div>
                   </div>
