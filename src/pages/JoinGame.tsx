@@ -45,12 +45,17 @@ export function JoinGame({ onJoin, onBack, isLoading, initialCode }: JoinGamePro
               <div>
                 <label className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                   <HashtagIcon className="w-4 h-4" />
-                  Code de la partie
+                  <span className="inline-flex items-center gap-1">
+                    Code de la partie
+                    <span className="text-destructive" aria-hidden="true">*</span>
+                    <span className="sr-only">obligatoire</span>
+                  </span>
                 </label>
                 <Input
                   placeholder="Exemple : ABC123"
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  aria-required="true"
                   className="tracking-wider border-border focus-visible:ring-foreground"
                   maxLength={6}
                 />
@@ -59,12 +64,17 @@ export function JoinGame({ onJoin, onBack, isLoading, initialCode }: JoinGamePro
               <div>
                 <label className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                   <UserIcon className="w-4 h-4" />
-                  Votre pseudo
+                  <span className="inline-flex items-center gap-1">
+                    Votre pseudo
+                    <span className="text-destructive" aria-hidden="true">*</span>
+                    <span className="sr-only">obligatoire</span>
+                  </span>
                 </label>
                 <Input
                   placeholder="Entrez votre nom"
                   value={playerName}
                   onChange={(e) => setPlayerName(e.target.value)}
+                  aria-required="true"
                   className="border-border focus-visible:ring-foreground"
                 />
               </div>

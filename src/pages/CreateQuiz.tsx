@@ -353,11 +353,16 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Titre du quiz</label>
+                <label className="text-sm font-medium text-muted-foreground inline-flex items-center gap-1">
+                  Titre du quiz
+                  <span className="text-destructive" aria-hidden="true">*</span>
+                  <span className="sr-only">obligatoire</span>
+                </label>
                 <Input
                   placeholder="Exemple : Culture générale"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  aria-required="true"
                   className="border-border focus-visible:ring-foreground"
                 />
               </div>
@@ -380,11 +385,6 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
                 >
                   Continuer
                 </CustomButton>
-                {!canProceedToQuestions && (
-                  <p className="text-sm text-muted-foreground self-center">
-                    Ajoutez un titre pour continuer.
-                  </p>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -467,23 +467,18 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
                     >
                       Précédent
                     </CustomButton>
-                    <CustomButton
-                      variant="primary"
-                      onClick={() => setCurrentStep(3)}
-                      className="w-full"
-                      disabled={!canProceedToSettings}
-                    >
-                      Suivant
-                    </CustomButton>
-                  </div>
-                  {!canProceedToSettings && (
-                    <p className="text-sm text-muted-foreground text-center">
-                      Ajoutez au moins une question complète.
-                    </p>
-                  )}
+                  <CustomButton
+                    variant="primary"
+                    onClick={() => setCurrentStep(3)}
+                    className="w-full"
+                    disabled={!canProceedToSettings}
+                  >
+                    Suivant
+                  </CustomButton>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
             <Card className="border border-border shadow-sm lg:col-span-2">
               <CardHeader className="flex flex-col gap-3 pb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -502,11 +497,16 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Question</label>
+                  <label className="text-sm font-medium text-muted-foreground inline-flex items-center gap-1">
+                    Question
+                    <span className="text-destructive" aria-hidden="true">*</span>
+                    <span className="sr-only">obligatoire</span>
+                  </label>
                   <Input
                     placeholder="Votre question ici..."
                     value={currentQuestion}
                     onChange={(e) => setCurrentQuestion(e.target.value)}
+                    aria-required="true"
                     className="border-border focus-visible:ring-foreground"
                   />
                 </div>
@@ -531,7 +531,11 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
                       <div className="flex items-center justify-between gap-3">
                         <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                           <div className={cn('w-3 h-3 rounded-full', getAnswerDotClass(answer.color))} />
-                          Réponse {index + 1}
+                          <span className="inline-flex items-center gap-1">
+                            Réponse {index + 1}
+                            <span className="text-destructive" aria-hidden="true">*</span>
+                            <span className="sr-only">obligatoire</span>
+                          </span>
                         </label>
                         <button
                           type="button"
@@ -553,6 +557,7 @@ export function CreateQuiz({ onSubmit, onBack, isLoading }: CreateQuizProps) {
                         placeholder={`Réponse ${index + 1}`}
                         value={answer.text}
                         onChange={(e) => handleUpdateAnswer(answer.id, e.target.value)}
+                        aria-required="true"
                         className={cn(
                           'border-border focus-visible:ring-foreground',
                           answer.isCorrect && 'border-[hsl(var(--answer-green))]'

@@ -52,7 +52,7 @@ export function Home({ onCreate, onJoin }: HomeProps) {
       <section className="min-h-[calc(100dvh-4rem)] flex flex-col justify-center px-10 sm:px-8 md:px-6 py-16 md:py-0 md:items-center">
         <div className="max-w-2xl md:mx-auto text-left md:text-center">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-medium tracking-tight text-foreground mb-4 leading-tight">
-            L'alternative gratuite à Kahoot pour vos quiz
+            L'alternative gratuite à Kahoot pour vos quiz.
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground md:max-w-xl md:mx-auto leading-snug mb-8">
             Créez des QCM, définissez le chrono et les points, puis lancez une
