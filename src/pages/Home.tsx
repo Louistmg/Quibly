@@ -32,7 +32,13 @@ export function Home({ onCreate, onJoin }: HomeProps) {
     <div className="min-h-screen bg-background">
       <nav className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <span className="text-xl font-medium">Quibly</span>
+          <a href="/" aria-label="Recharger Quibly">
+            <img
+              src="/logo.png"
+              alt="Logo Quibly"
+              className="h-16 w-56 object-contain translate-y-1"
+            />
+          </a>
           <CustomButton
             variant="secondary"
             icon={<GithubIcon className="w-4 h-4" />}
@@ -389,7 +395,11 @@ export function Home({ onCreate, onJoin }: HomeProps) {
       <footer className="border-t border-border py-12">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <span className="text-lg font-medium">Quibly</span>
+            <img
+              src="/logo.png"
+              alt="Logo Quibly"
+              className="h-16 w-56 object-contain translate-y-1"
+            />
             <p className="text-sm text-muted-foreground">
               Une alternative open source et gratuite à Kahoot
             </p>
