@@ -351,7 +351,7 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
                       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-muted/40 rounded-xl border border-border transition-all duration-500"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center font-medium">
+                        <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-medium">
                           {(player.name?.[0] ?? '?').toUpperCase()}
                         </div>
                         <div>
@@ -361,7 +361,6 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
                       </div>
                       <div className="text-left sm:text-right">
                         <div className="flex items-center justify-start gap-2 sm:justify-end">
-                          <p className="text-lg font-medium text-foreground">{player.score}</p>
                           {player.streak >= 2 && (
                             <div className="flex items-center gap-1">
                               <FireIcon className="w-4 h-4 text-[hsl(var(--answer-yellow))]" />
@@ -372,6 +371,7 @@ export function HostGame({ session, quiz, onQuit }: HostGameProps) {
                               )}
                             </div>
                           )}
+                          <p className="text-lg font-medium text-foreground">{player.score}</p>
                         </div>
                         <p className="text-sm text-muted-foreground">pts</p>
                       </div>

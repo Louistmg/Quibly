@@ -197,7 +197,7 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
                       key={p.id}
                       className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border min-w-0"
                     >
-                      <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center font-medium">
+                      <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-medium">
                         {(p.name?.[0] ?? '?').toUpperCase()}
                       </div>
                       <span className="font-medium text-foreground break-words">{p.name}</span>

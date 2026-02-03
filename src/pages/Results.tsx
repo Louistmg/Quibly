@@ -178,7 +178,9 @@ export function Results({ session, onBack }: ResultsProps) {
                   className="flex items-center justify-between p-4 rounded-xl border border-border"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="text-sm font-medium text-foreground">#{player.rank}</div>
+                    <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-xs font-medium">
+                      #{player.rank}
+                    </div>
                     <p className="font-medium text-foreground">{player.name}</p>
                   </div>
                   <div className="text-right">

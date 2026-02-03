@@ -379,7 +379,6 @@ export function PlayGame({ session, quiz, player }: PlayGameProps) {
                     </div>
                     <div className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <p className="text-lg font-medium text-white">{rankedPlayer.score}</p>
                         {rankedPlayer.streak >= 2 && (
                           <div className="flex items-center gap-1">
                             <FireIcon className="w-4 h-4 text-[hsl(var(--answer-yellow))]" />
@@ -390,6 +389,7 @@ export function PlayGame({ session, quiz, player }: PlayGameProps) {
                             )}
                           </div>
                         )}
+                        <p className="text-lg font-medium text-white">{rankedPlayer.score}</p>
                       </div>
                       <p className="text-xs text-white/60">pts</p>
                     </div>
