@@ -207,23 +207,14 @@ export function PlayGame({ session, quiz, player }: PlayGameProps) {
   return (
     <div className="min-h-screen bg-[#1a1a2e] text-white p-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3 justify-center sm:justify-start w-full sm:w-auto">
-          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-medium border border-white/20">
-            {player?.name[0].toUpperCase() || '?'}
-          </div>
-          <span className="font-medium break-words">{player?.name || 'Joueur'}</span>
+      <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+        <div className="flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 border border-white/10">
+          <CrownIcon className="w-5 h-5 text-[hsl(var(--answer-yellow))]" />
+          <span className="font-medium">{score}</span>
         </div>
-        
-        <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 w-full sm:w-auto">
-          <div className="flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 border border-white/10">
-            <CrownIcon className="w-5 h-5 text-[hsl(var(--answer-yellow))]" />
-            <span className="font-medium">{score}</span>
-          </div>
-          <div className="flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 border border-white/10">
-            <span className="text-sm text-white/60">Question</span>
-            <span className="font-medium">{currentQuestionIndex + 1}/{quiz?.questions.length}</span>
-          </div>
+        <div className="flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 border border-white/10">
+          <span className="text-sm text-white/60">Question</span>
+          <span className="font-medium">{currentQuestionIndex + 1}/{quiz?.questions.length}</span>
         </div>
       </div>
 
