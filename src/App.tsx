@@ -150,8 +150,11 @@ function App() {
     const sessionId = currentSession?.id
     const playerId = currentPlayer?.id
     const isCurrentHost = isHost
+    const isFinished = currentSession?.status === 'finished'
 
     clearActiveSession()
+
+    if (isFinished) return
 
     if (isCurrentHost && sessionId) {
       try {
@@ -169,7 +172,16 @@ function App() {
         console.error('Erreur lors de la suppression du joueur :', err)
       }
     }
-  }, [clearActiveSession, currentPlayer?.id, currentSession?.id, deleteGameSession, isHost, notifyPlayersChanged, removePlayer])
+  }, [
+    clearActiveSession,
+    currentPlayer?.id,
+    currentSession?.id,
+    currentSession?.status,
+    deleteGameSession,
+    isHost,
+    notifyPlayersChanged,
+    removePlayer
+  ])
 
   const handleStartCreate = useCallback(() => {
     resetSessionState()

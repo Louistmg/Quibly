@@ -53,7 +53,7 @@ const getPodiumBadgeStyle = (rank: number) => {
 export function Results({ session, onBack }: ResultsProps) {
   const [players, setPlayers] = useState<UiPlayer[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const { getPlayers, subscribeToSession } = useSupabase()
+  const { getPlayers } = useSupabase()
 
   const mapDbPlayers = useCallback((dbPlayers: DbPlayer[]): UiPlayer[] => {
     return dbPlayers
@@ -85,13 +85,7 @@ export function Results({ session, onBack }: ResultsProps) {
     void loadPlayers()
   }, [loadPlayers])
 
-  useEffect(() => {
-    if (!session?.id) return
-    const unsubscribe = subscribeToSession(session.id, () => {
-      void loadPlayers()
-    })
-    return unsubscribe
-  }, [loadPlayers, session?.id, subscribeToSession])
+  // Keep final results static: load once, no realtime updates.
 
   const rankedPlayers = useMemo(() => {
     return [...players]
