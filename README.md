@@ -2,7 +2,7 @@
 
 Quibly est une alternative open source à Kahoot pour créer et animer des quiz en direct. Simple à lancer, pensé pour les classes, ateliers et événements.
 
-Le lien : [quibly.vercel.app](https://quibly.vercel.app/)
+Le lien : [quibly-quiz.vercel.app](https://quibly-quiz.vercel.app/)
 
 ## En bref
 - Créez un quiz en quelques minutes.
