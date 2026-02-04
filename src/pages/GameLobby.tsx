@@ -181,12 +181,12 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
           </Card>
 
           {isHost && (
-            <Card className="border border-border shadow-sm">
-              <CardHeader className="text-center pb-3">
+            <Card className="border border-border shadow-sm gap-5">
+              <CardHeader className="text-center">
                 <CardTitle className="text-lg font-medium">Code de la partie</CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
-                <div className="flex flex-col items-center gap-4 text-center">
+                <div className="flex flex-col items-center gap-5 text-center">
                   <div className="text-4xl font-medium tracking-wider text-[hsl(var(--answer-blue))]">
                     {gameCode || '—'}
                   </div>

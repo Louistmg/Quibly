@@ -149,12 +149,12 @@
 
   /* Custom text selection */
   ::selection {
-    background-color: #000;
+    background-color: hsl(var(--answer-blue));
     color: #fff;
   }
 
   ::-moz-selection {
-    background-color: #000;
+    background-color: hsl(var(--answer-blue));
     color: #fff;
   }
 }
