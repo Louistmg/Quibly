@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SiteFooter } from "@/components/SiteFooter";
 import {
   GameController01Icon,
   UserGroupIcon,
@@ -25,9 +26,11 @@ import {
 interface HomeProps {
   onCreate: () => void;
   onJoin: () => void;
+  onOpenTerms: () => void;
+  onOpenPrivacy: () => void;
 }
 
-export function Home({ onCreate, onJoin }: HomeProps) {
+export function Home({ onCreate, onJoin, onOpenTerms, onOpenPrivacy }: HomeProps) {
   return (
     <div className="min-h-screen bg-background">
       <nav className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
@@ -392,42 +395,10 @@ export function Home({ onCreate, onJoin }: HomeProps) {
         </div>
       </section>
 
-      <footer className="border-t border-border py-12">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <img
-              src="/logo.png"
-              alt="Logo Quibly"
-              className="h-16 w-56 object-contain translate-y-1"
-            />
-            <p className="text-sm text-muted-foreground">
-              Une alternative open source et gratuite à Kahoot
-            </p>
-            <div className="flex items-center gap-6">
-              <a
-                href="https://github.com/Louistmg/Quibly"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                GitHub
-              </a>
-              <a
-                href="#"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Conditions
-              </a>
-              <a
-                href="#"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Confidentialité
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter
+        onOpenTerms={onOpenTerms}
+        onOpenPrivacy={onOpenPrivacy}
+      />
     </div>
   );
 }

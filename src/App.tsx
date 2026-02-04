@@ -15,6 +15,8 @@ type StoredSession = {
 }
 
 const Home = lazy(() => import('@/pages/Home').then((module) => ({ default: module.Home })))
+const Terms = lazy(() => import('@/pages/Terms').then((module) => ({ default: module.Terms })))
+const Privacy = lazy(() => import('@/pages/Privacy').then((module) => ({ default: module.Privacy })))
 const CreateQuiz = lazy(() => import('@/pages/CreateQuiz').then((module) => ({ default: module.CreateQuiz })))
 const JoinGame = lazy(() => import('@/pages/JoinGame').then((module) => ({ default: module.JoinGame })))
 const GameLobby = lazy(() => import('@/pages/GameLobby').then((module) => ({ default: module.GameLobby })))
@@ -194,6 +196,14 @@ function App() {
     setPhase('join')
   }, [resetSessionState])
 
+  const handleOpenTerms = useCallback(() => {
+    setPhase('terms')
+  }, [])
+
+  const handleOpenPrivacy = useCallback(() => {
+    setPhase('privacy')
+  }, [])
+
   useEffect(() => {
     ensureAuth().catch((err: unknown) => {
       console.error('Auth error:', err)
@@ -269,6 +279,16 @@ function App() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (readStoredSession()) return
+
+    const hash = window.location.hash.replace('#', '').trim().toLowerCase()
+    if (hash === 'conditions') {
+      setPhase('terms')
+      return
+    }
+    if (hash === 'confidentialite') {
+      setPhase('privacy')
+      return
+    }
 
     const url = new URL(window.location.href)
     const rawCode = url.searchParams.get('code')
@@ -594,6 +614,24 @@ function App() {
           <Home
             onCreate={handleStartCreate}
             onJoin={handleStartJoin}
+            onOpenTerms={handleOpenTerms}
+            onOpenPrivacy={handleOpenPrivacy}
+          />
+        )
+      case 'terms':
+        return (
+          <Terms
+            onBack={() => setPhase('home')}
+            onOpenTerms={handleOpenTerms}
+            onOpenPrivacy={handleOpenPrivacy}
+          />
+        )
+      case 'privacy':
+        return (
+          <Privacy
+            onBack={() => setPhase('home')}
+            onOpenTerms={handleOpenTerms}
+            onOpenPrivacy={handleOpenPrivacy}
           />
         )
       case 'create':

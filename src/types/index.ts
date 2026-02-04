@@ -55,4 +55,4 @@ export type GameSession = {
   updatedAt?: Date | null;
 };
 
-export type GamePhase = 'home' | 'create' | 'join' | 'lobby' | 'play' | 'results';
+export type GamePhase = 'home' | 'create' | 'join' | 'lobby' | 'play' | 'results' | 'terms' | 'privacy';
