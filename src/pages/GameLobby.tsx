@@ -55,7 +55,7 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
   }, [loadPlayers])
 
   useLayoutEffect(() => {
-    return scheduleScrollToTop({ withViewportGuard: true })
+    return scheduleScrollToTop({ withViewportGuard: true, guardMs: 5000 })
   }, [session?.id])
 
   useEffect(() => {
@@ -121,7 +121,7 @@ export function GameLobby({ session, quiz, onStart, onBack, isHost }: GameLobbyP
   }, [gameCode])
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-svh bg-background px-6 pb-6 pt-safe-top">
       <div className="container mx-auto max-w-4xl">
         <CustomButton
           variant="secondary"

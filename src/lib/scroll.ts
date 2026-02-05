@@ -3,6 +3,19 @@ type ScheduleOptions = {
   guardMs?: number
 }
 
+const getScrollTargets = () => {
+  if (typeof document === 'undefined') return []
+
+  const elements = [
+    document.scrollingElement,
+    document.documentElement,
+    document.body,
+    document.getElementById('root'),
+  ]
+
+  return Array.from(new Set(elements.filter((element): element is Element => Boolean(element))))
+}
+
 const isIosDevice = () => {
   if (typeof window === 'undefined') return false
   const { userAgent } = window.navigator
@@ -12,10 +25,20 @@ const isIosDevice = () => {
 
 export const scrollToTop = () => {
   if (typeof window === 'undefined') return
-  const scrollElement = document.scrollingElement || document.documentElement || document.body
-  scrollElement.scrollTop = 0
-  document.documentElement.scrollTop = 0
-  document.body.scrollTop = 0
+  const targets = getScrollTargets()
+
+  targets.forEach((target) => {
+    if ('scrollTop' in target) {
+      target.scrollTop = 0
+    }
+    if ('scrollLeft' in target) {
+      target.scrollLeft = 0
+    }
+    if ('scrollTo' in target && typeof target.scrollTo === 'function') {
+      target.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    }
+  })
+
   window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
 }
 
@@ -31,7 +54,7 @@ export const scheduleScrollToTop = (options: ScheduleOptions = {}) => {
   fire()
   rafs.push(window.requestAnimationFrame(fire))
 
-  ;[100, 350, 600, 900, 1200, 1600, 2200].forEach((delay) => {
+  ;[100, 350, 600, 900, 1200, 1600, 2200, 3000, 4000].forEach((delay) => {
     timeouts.push(window.setTimeout(fire, delay))
   })
 
@@ -52,12 +75,14 @@ export const scheduleScrollToTop = (options: ScheduleOptions = {}) => {
   const handleViewportChange = () => fire()
   viewport.addEventListener('resize', handleViewportChange)
   viewport.addEventListener('scroll', handleViewportChange)
+  window.addEventListener('scroll', handleViewportChange, { passive: true })
   window.addEventListener('orientationchange', handleViewportChange)
 
   const guardMs = options.guardMs ?? 2000
   const guardTimeout = window.setTimeout(() => {
     viewport.removeEventListener('resize', handleViewportChange)
     viewport.removeEventListener('scroll', handleViewportChange)
+    window.removeEventListener('scroll', handleViewportChange)
     window.removeEventListener('orientationchange', handleViewportChange)
   }, guardMs)
 
@@ -66,6 +91,7 @@ export const scheduleScrollToTop = (options: ScheduleOptions = {}) => {
     window.clearTimeout(guardTimeout)
     viewport.removeEventListener('resize', handleViewportChange)
     viewport.removeEventListener('scroll', handleViewportChange)
+    window.removeEventListener('scroll', handleViewportChange)
     window.removeEventListener('orientationchange', handleViewportChange)
   }
 }
