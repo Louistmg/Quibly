@@ -85,8 +85,6 @@ export function Results({ session, onBack }: ResultsProps) {
     void loadPlayers()
   }, [loadPlayers])
 
-  // Keep final results static: load once, no realtime updates.
-
   const rankedPlayers = useMemo(() => {
     return [...players]
       .sort((a, b) => b.score - a.score)

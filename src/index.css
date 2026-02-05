@@ -147,7 +147,6 @@
     -webkit-user-select: none !important;
   }
 
-  /* Custom text selection */
   ::selection {
     background-color: hsl(var(--answer-blue));
     color: #fff;

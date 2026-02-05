@@ -227,7 +227,6 @@ export function PlayGame({ session, quiz, player }: PlayGameProps) {
 
   return (
     <div className="min-h-screen bg-[#1a1a2e] text-white p-4">
-      {/* Header */}
       <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
         <div className="flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 border border-white/10">
           <CrownIcon className="w-5 h-5 text-[hsl(var(--answer-yellow))]" />
@@ -241,7 +240,6 @@ export function PlayGame({ session, quiz, player }: PlayGameProps) {
 
       {!isScoreboardPhase && (
         <>
-          {/* Timer */}
           <div className="mb-8">
             <div className="flex items-center justify-center gap-3 mb-3">
               <StopWatchIcon className="w-6 h-6" />
@@ -259,7 +257,6 @@ export function PlayGame({ session, quiz, player }: PlayGameProps) {
             </div>
           </div>
 
-          {/* Question */}
           <div className="text-center mb-10">
             <h2 className="text-3xl md:text-4xl font-medium leading-tight">
               {currentQuestion.text}
@@ -270,7 +267,6 @@ export function PlayGame({ session, quiz, player }: PlayGameProps) {
 
       {!isScoreboardPhase && (
         <>
-          {/* Answers Grid */}
           {isWaitingForResults ? (
             <div className="max-w-3xl mx-auto">
               <div className="flex flex-col items-center justify-center gap-5 rounded-2xl border border-white/10 bg-white/5 py-16">
@@ -320,7 +316,6 @@ export function PlayGame({ session, quiz, player }: PlayGameProps) {
         </>
       )}
 
-      {/* Result Message */}
       {showResult && !isScoreboardPhase && (
         <div className="text-center mt-8 space-y-4">
           {submissionError ? (
